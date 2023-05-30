@@ -1,0 +1,7 @@
+.vscode
+zig-out
+zig-cache
+tmp/
+*.tar*
+*.tgz
+*.zip
