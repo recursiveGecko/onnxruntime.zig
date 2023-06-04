@@ -13,3 +13,15 @@ curl https://github.com/microsoft/onnxruntime/releases/download/v1.15.0/onnxrunt
 tar xvf lib/onnxruntime.tgz --directory lib/onnxruntime-linux-x64 --strip-components 1
 rm lib/onnxruntime.tgz
 ```
+
+# Licensing
+
+`/src/*`, `/examples/*/src/*` and any other first party code - Mozilla Public License 2.0 (`/LICENSE.txt`)
+
+`/lib/*`, `/examples/*/lib/*` and any other third party libraries - See original projects for licensing information.
+
+`/examples/nsnet2/data/*.onnx` - NSNet2 ONNX models are [MIT licensed by Microsoft](https://github.com/microsoft/DNS-Challenge/tree/v4dnschallenge_ICASSP2022).
+
+`/examples/silero_vad/data/*.onnx` - Silero VAD ONNX models are [MIT licensed by Silero Team](https://github.com/snakers4/silero-vad/tree/7e9680bc83230b745f4794219fe11f4ea50965cd).
+
+`/examples/*/data/*.wav` - Example WAV files are unlicensed. Please open a GitHub issue to request removal if you believe these files are infringing on your copyright and fall outside the scope of fair use.

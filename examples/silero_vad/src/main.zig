@@ -71,7 +71,8 @@ pub fn main() !void {
 
     // Initialize ONNX runtime
 
-    var ort_api = try onnx.OrtApi.init();
+    var ort_api = try onnx.OrtApi.init(allocator);
+    defer ort_api.deinit();
     var ort_env = try ort_api.createEnv(.warning, "ZIG");
     var sess_opts = try ort_api.createSessionOptions();
     var ort_sess = try ort_api.createSession(ort_env, silero_model_path, sess_opts);
@@ -175,7 +176,7 @@ pub fn main() !void {
         .audio_stream = audio_stream,
         .audio_read_n_frames = audio_read_n_frames,
         .audio_read_buffer = audio_read_buffer,
-        .ort_api = &ort_api,
+        .ort_api = ort_api,
         .ort_session = ort_sess,
         .ort_run_options = run_opts,
         .sample_tick_rate = sample_tick_rate,

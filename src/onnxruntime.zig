@@ -1,4 +1,5 @@
 const std = @import("std");
+const Allocator = std.mem.Allocator;
 
 /// API docs: https://onnxruntime.ai/docs/api/c/struct_ort_api.html
 pub const c_api = @cImport({
@@ -51,13 +52,25 @@ pub const OrtMemType = enum(i32) {
 pub const OrtApi = struct {
     const Self = @This();
 
+    allocator: Allocator,
     ort_api: *const c_api.OrtApi,
 
-    pub fn init() !Self {
+    pub fn init(allocator: Allocator) !*Self {
         var ort_api = c_api.OrtGetApiBase().*.GetApi.?(c_api.ORT_API_VERSION);
-        return Self{
+
+        var self = try allocator.create(Self);
+        errdefer allocator.destroy(self);
+
+        self.* = Self{
+            .allocator = allocator,
             .ort_api = ort_api,
         };
+
+        return self;
+    }
+
+    pub fn deinit(self: *Self) void {
+        self.allocator.destroy(self);
     }
 
     pub fn createEnv(

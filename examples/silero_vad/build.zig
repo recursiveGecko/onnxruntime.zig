@@ -1,9 +1,9 @@
 const std = @import("std");
-const onnxruntime = @import("../../build.zig");
+const main_build = @import("../../build.zig");
 
 pub fn build(
     b: *std.Build,
-    common_options: onnxruntime.CommonOptions,
+    common_options: main_build.CommonOptions,
     examples_step: *std.Build.Step,
 ) !void {
     const exe = b.addExecutable(.{
@@ -16,7 +16,7 @@ pub fn build(
     });
     
     exe.linkSystemLibrary("sndfile");
-    try onnxruntime.linkPackage(b, exe, common_options);
+    try main_build.linkPackage(b, exe, common_options);
 
     const exe_install = b.addInstallArtifact(exe);
     examples_step.dependOn(&exe_install.step);

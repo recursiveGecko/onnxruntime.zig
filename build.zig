@@ -30,12 +30,8 @@ pub fn build(b: *std.Build) !void {
     const lib = try buildLib(b, common_options);
     _ = lib;
 
-    // var examples_step = try ExamplesStep.create(b, common_options);
     const examples_build_step = b.step("examples", "Build examples");
-    // examples_build_step.dependOn(&examples_step.step);
-
-    const silero_vad = @import("examples/silero_vad/build.zig");
-    try silero_vad.build(b, common_options, examples_build_step);
+    try maybeBuildExamples(b, common_options, examples_build_step);
 }
 
 pub fn buildLib(b: *std.Build, common_options: CommonOptions) !*std.build.CompileStep {
@@ -68,9 +64,22 @@ pub fn addOnnxRuntime(b: *std.Build, unit: *std.build.CompileStep, common_option
     _ = common_options;
 
     b.addSearchPrefix("lib/onnxruntime-linux-x64");
+    unit.addIncludePath("lib/onnxruntime-linux-x64/include");
     // unit.each_lib_rpath = false;
     unit.linkSystemLibrary("onnxruntime");
     unit.linkLibC();
+}
+
+pub fn maybeBuildExamples(
+    b: *std.Build,
+    common_options: CommonOptions,
+    examples_step: *std.Build.Step,
+) !void {
+    const silero_vad = @import("examples/silero_vad/build.zig");
+    try silero_vad.build(b, common_options, examples_step);
+
+    const nsnet2 = @import("examples/nsnet2/build.zig");
+    try nsnet2.build(b, common_options, examples_step);
 }
 
 pub fn projectPaths(
