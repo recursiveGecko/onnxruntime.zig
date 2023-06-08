@@ -415,8 +415,7 @@ pub fn calcSpectrogram(
         const out_end_idx = out_start_idx + n_bins;
         const output_bins = result_specgram[out_start_idx..out_end_idx];
 
-        // Applies the window function, computes the FFT, and stores
-        // a real-valued result equal to sqrt(re^2 + im^2) into output_bins
+        // Applies the window function, computes the FFT, and stores complex results in output_bins
         try fft.fft(input_frame, window, output_bins);
     }
 }
