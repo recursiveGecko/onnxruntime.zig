@@ -14,6 +14,21 @@ tar xvf lib/onnxruntime.tgz --directory lib/onnxruntime-linux-x64 --strip-compon
 rm lib/onnxruntime.tgz
 ```
 
+# Examples
+
+Please note that examples don't have a functioning CLI interface at this point, some paths are hardcoded at the top of `main.zig`.
+
+To build or run the examples, run:
+
+```bash
+# Run Silero VAD
+zig build run-silero-vad
+# Run NSNet2
+zig build run-nsnet
+# Build all examples
+zig build examples
+```
+
 # Licensing
 
 `/src/*`, `/examples/*/src/*` and any other first party code - Mozilla Public License 2.0 (`/LICENSE.txt`)
