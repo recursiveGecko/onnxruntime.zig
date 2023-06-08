@@ -83,9 +83,7 @@ pub fn fft(
     samples: []const f32,
     window: []const f32,
     result: []Complex,
-    overlap_frac: f32,
 ) !void {
-    _ = overlap_frac;
     if (samples.len != self.n_fft) {
         return error.InvalidSamplesLength;
     }
@@ -103,21 +101,6 @@ pub fn fft(
 
     // Run FFT
     kissfft.kiss_fftr(self.kiss_cfg, in_samples.ptr, @ptrCast(*kissfft.kiss_fft_cpx, result.ptr));
-
-    const window_norm = window_fn.windowNormFactor(window);
-    var norm_factor: f32 = window_norm / @intToFloat(f32, self.n_fft / 2);
-    _ = norm_factor;
-
-    // std.debug.print("norm_factor: {d}\n", .{norm_factor});
-    // std.debug.print("vals: ", .{});
-    
-    // Normalize FFT output
-    // for (0..result.len) |i| {
-    //     result[i].r *= norm_factor * 0.5;
-    //     result[i].i *= norm_factor * 0.5;
-    //     std.debug.print("{d:.3} ", .{result[i].r});
-    // }
-    // std.debug.print("\n", .{});
 }
 
 pub fn invFft(
@@ -202,17 +185,3 @@ fn loadSamplesFwd(
     return self.buf_real;
 }
 
-/// Loads amples into the KissFFT input buffer for inverse FFT
-fn loadSamplesInv(
-    self: *Self,
-    bins: []const f32,
-) []const kissfft.kiss_fft_cpx {
-    std.debug.assert(bins.len == self.binCount());
-
-    for (bins, 0..) |bin_val, idx| {
-        self.buf_cpx[idx].r = bin_val;
-        self.buf_cpx[idx].i = 0;
-    }
-
-    return self.buf_cpx;
-}

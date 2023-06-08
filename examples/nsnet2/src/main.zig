@@ -433,7 +433,7 @@ pub fn calcSpectrogram(
 
         // Applies the window function, computes the FFT, and stores
         // a real-valued result equal to sqrt(re^2 + im^2) into output_bins
-        try fft.fft(input_frame, window, output_bins, 0.1);
+        try fft.fft(input_frame, window, output_bins);
     }
 }
 
