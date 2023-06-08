@@ -55,6 +55,7 @@ pub const OnnxInstanceOpts = struct {
     log_id: [:0]const u8,
     input_names: []const [:0]const u8,
     output_names: []const [:0]const u8,
+    num_threads: u16 = 1,
 };
 
 pub const OnnxInstance = struct {
@@ -76,10 +77,16 @@ pub const OnnxInstance = struct {
         allocator: Allocator,
         options: OnnxInstanceOpts,
     ) !*Self {
-        var ort_api = c_api.OrtGetApiBase().*.GetApi.?(c_api.ORT_API_VERSION);
+        var ort_api: *const c_api.OrtApi = c_api.OrtGetApiBase().*.GetApi.?(c_api.ORT_API_VERSION);
 
         const ort_env = try createEnv(ort_api, options);
         const session_opts = try createSessionOptions(ort_api);
+
+        var res1 = ort_api.SetInterOpNumThreads.?(session_opts, options.num_threads);
+        std.debug.assert(res1 == null);
+        var res2 = ort_api.SetIntraOpNumThreads.?(session_opts, options.num_threads);
+        std.debug.assert(res2 == null);
+
         const session = try createSession(ort_api, ort_env, session_opts, options);
         const run_opts = try createRunOptions(ort_api);
 
