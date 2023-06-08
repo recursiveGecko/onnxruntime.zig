@@ -113,6 +113,20 @@ pub const OnnxInstance = struct {
     }
 
     pub fn deinit(self: *Self) void {
+        for (self.ort_inputs.?) |input| {
+            self.ort_api.ReleaseValue.?(input);
+        }
+
+        for (self.ort_outputs.?) |output| {
+            self.ort_api.ReleaseValue.?(output);
+        }
+
+        self.ort_api.ReleaseRunOptions.?(self.run_opts);
+        self.ort_api.ReleaseSession.?(self.session);
+        self.ort_api.ReleaseSessionOptions.?(self.session_opts);
+        self.ort_api.ReleaseMemoryInfo.?(self.mem_info);
+        self.ort_api.ReleaseEnv.?(self.ort_env);
+
         self.allocator.free(self.ort_inputs.?);
         self.allocator.free(self.ort_outputs.?);
         self.allocator.free(self.input_names);
