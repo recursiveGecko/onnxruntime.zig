@@ -15,9 +15,7 @@ inline fn srcDir() []const u8 {
 
 const InferenceState = struct {
     allocator: std.mem.Allocator,
-    ort_api: *onnx.OrtApi,
-    ort_session: *onnx.c_api.OrtSession,
-    ort_run_options: *onnx.c_api.OrtRunOptions,
+    onnx_instance: *onnx.OnnxInstance,
     audio_stream: AudioFileStream,
     audio_read_buffer: [][]f32,
     audio_read_n_frames: usize,
@@ -26,13 +24,10 @@ const InferenceState = struct {
     /// downsampling the audio from 48kHz to 16kHz
     sample_tick_rate: usize,
     window_size: usize,
-    input_names: []const [*:0]const u8,
-    ort_inputs: []const *onnx.c_api.OrtValue,
+    // Model inputs/outputs
     pcm: []f32,
     h: []f32,
     c: []f32,
-    output_names: []const [*:0]const u8,
-    ort_outputs: []?*onnx.c_api.OrtValue,
     vad: []f32,
     hn: []f32,
     cn: []f32,
@@ -71,21 +66,23 @@ pub fn main() !void {
 
     // Initialize ONNX runtime
 
-    var ort_api = try onnx.OrtApi.init(allocator);
-    defer ort_api.deinit();
-    var ort_env = try ort_api.createEnv(.warning, "ZIG");
-    var sess_opts = try ort_api.createSessionOptions();
-    var ort_sess = try ort_api.createSession(ort_env, silero_model_path, sess_opts);
-    var mem_info = try ort_api.createMemoryInfo("Cpu", .arena, 0, .default);
-    var run_opts = try ort_api.createRunOptions();
+    const onnx_opts = onnx.OnnxInstanceOpts{
+        .log_id = "ZIG",
+        .log_level = .warning,
+        .model_path = silero_model_path,
+        .input_names = &.{ "input", "sr", "h", "c" },
+        .output_names = &.{ "output", "hn", "cn" },
+    };
+    var onnx_instance = try onnx.OnnxInstance.init(allocator, onnx_opts);
+    try onnx_instance.initMemoryInfo("Cpu", .arena, 0, .default);
+    defer onnx_instance.deinit();
 
     // PCM input
     var pcm_node_dimms: []const i64 = &.{ 1, window_size_samples };
     var pcm: [window_size_samples]f32 = undefined;
     @memset(&pcm, 0);
-    var pcm_ort_input = try ort_api.createTensorWithDataAsOrtValue(
+    var pcm_ort_input = try onnx_instance.createTensorWithDataAsOrtValue(
         f32,
-        mem_info,
         &pcm,
         pcm_node_dimms,
         .f32,
@@ -94,9 +91,8 @@ pub fn main() !void {
     // Sample rate input
     var sr_node_dimms: []const i64 = &.{1};
     var sr = [1]i64{sample_rate};
-    var sr_ort_input = try ort_api.createTensorWithDataAsOrtValue(
+    var sr_ort_input = try onnx_instance.createTensorWithDataAsOrtValue(
         i64,
-        mem_info,
         &sr,
         sr_node_dimms,
         .i64,
@@ -108,9 +104,8 @@ pub fn main() !void {
 
     var h: [size_hc]f32 = undefined;
     @memset(&h, 0);
-    var h_ort_input = try ort_api.createTensorWithDataAsOrtValue(
+    var h_ort_input = try onnx_instance.createTensorWithDataAsOrtValue(
         f32,
-        mem_info,
         &h,
         hc_node_dimms,
         .f32,
@@ -118,27 +113,24 @@ pub fn main() !void {
 
     var c: [size_hc]f32 = undefined;
     @memset(&c, 0);
-    var c_ort_input = try ort_api.createTensorWithDataAsOrtValue(
+    var c_ort_input = try onnx_instance.createTensorWithDataAsOrtValue(
         f32,
-        mem_info,
         &c,
         hc_node_dimms,
         .f32,
     );
 
-    const input_names: []const [*:0]const u8 = &.{ "input", "sr", "h", "c" };
-    const ort_inputs = [_]*onnx.c_api.OrtValue{
+    const ort_inputs = try allocator.dupe(*onnx.c_api.OrtValue, &.{
         pcm_ort_input,
         sr_ort_input,
         h_ort_input,
         c_ort_input,
-    };
+    });
 
     // Set up outputs
     var vad = [1]f32{1};
-    var vad_ort_output = try ort_api.createTensorWithDataAsOrtValue(
+    var vad_ort_output = try onnx_instance.createTensorWithDataAsOrtValue(
         f32,
-        mem_info,
         &vad,
         &.{ 1, 1 },
         .f32,
@@ -146,9 +138,8 @@ pub fn main() !void {
 
     var hn: [size_hc]f32 = undefined;
     @memset(&hn, 0);
-    var hn_ort_output = try ort_api.createTensorWithDataAsOrtValue(
+    var hn_ort_output = try onnx_instance.createTensorWithDataAsOrtValue(
         f32,
-        mem_info,
         &hn,
         hc_node_dimms,
         .f32,
@@ -156,38 +147,33 @@ pub fn main() !void {
 
     var cn: [size_hc]f32 = undefined;
     @memset(&cn, 0);
-    var cn_ort_output = try ort_api.createTensorWithDataAsOrtValue(
+    var cn_ort_output = try onnx_instance.createTensorWithDataAsOrtValue(
         f32,
-        mem_info,
         &cn,
         hc_node_dimms,
         .f32,
     );
 
-    const output_names: []const [*:0]const u8 = &.{ "output", "hn", "cn" };
-    var ort_outputs = [_]?*onnx.c_api.OrtValue{
+    var ort_outputs = try allocator.dupe(?*onnx.c_api.OrtValue, &.{
         vad_ort_output,
         hn_ort_output,
         cn_ort_output,
-    };
+    });
+
+    onnx_instance.setManagedInputsOutputs(ort_inputs, ort_outputs);
 
     var inference_state = InferenceState{
         .allocator = allocator,
         .audio_stream = audio_stream,
         .audio_read_n_frames = audio_read_n_frames,
         .audio_read_buffer = audio_read_buffer,
-        .ort_api = ort_api,
-        .ort_session = ort_sess,
-        .ort_run_options = run_opts,
         .sample_tick_rate = sample_tick_rate,
         .window_size = window_size_samples,
-        .input_names = input_names,
-        .ort_inputs = &ort_inputs,
+        // model inputs/outputs
+        .onnx_instance = onnx_instance,
         .pcm = &pcm,
         .h = &h,
         .c = &c,
-        .output_names = output_names,
-        .ort_outputs = &ort_outputs,
         .vad = &vad,
         .hn = &hn,
         .cn = &cn,
@@ -233,14 +219,7 @@ fn runInference(state: *InferenceState) !void {
             state.pcm[i] = state.audio_read_buffer[channel][frame_idx];
         }
 
-        try state.ort_api.run(
-            state.ort_session,
-            state.ort_run_options,
-            state.input_names,
-            state.ort_inputs,
-            state.output_names,
-            state.ort_outputs,
-        );
+        try state.onnx_instance.run();
 
         // Output VAD value
         const vad = state.vad[0];

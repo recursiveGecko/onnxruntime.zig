@@ -16,22 +16,15 @@ inline fn srcDir() []const u8 {
 
 const OnnxState = struct {
     allocator: std.mem.Allocator,
-    ort_api: *onnx.OrtApi,
-    ort_session: *onnx.c_api.OrtSession,
-    ort_run_options: *onnx.c_api.OrtRunOptions,
-
-    ort_inputs: [1]*onnx.c_api.OrtValue,
-    input_names: []const [*:0]const u8,
+    onnx_instance: *onnx.OnnxInstance,
     features: []f32,
-    ort_outputs: [1]?*onnx.c_api.OrtValue,
-    output_names: []const [*:0]const u8,
     // shape equal to specgram & features
     gains: []f32,
 
     pub fn deinit(self: *@This()) void {
         self.allocator.free(self.features);
         self.allocator.free(self.gains);
-        self.ort_api.deinit();
+        self.onnx_instance.deinit();
     }
 };
 
@@ -178,12 +171,15 @@ fn initOnnx(
     n_fft: usize,
     n_hop: usize,
 ) !OnnxState {
-    var ort_api = try onnx.OrtApi.init(allocator);
-    var ort_env = try ort_api.createEnv(.warning, "ZIG");
-    var sess_opts = try ort_api.createSessionOptions();
-    var ort_sess = try ort_api.createSession(ort_env, nsnet_model_path, sess_opts);
-    var mem_info = try ort_api.createMemoryInfo("Cpu", .arena, 0, .default);
-    var run_opts = try ort_api.createRunOptions();
+    const onnx_opts = onnx.OnnxInstanceOpts{
+        .log_id = "ZIG",
+        .log_level = .warning,
+        .model_path = nsnet_model_path,
+        .input_names = &.{"input"},
+        .output_names = &.{"output"},
+    };
+    var onnx_instance = try onnx.OnnxInstance.init(allocator, onnx_opts);
+    try onnx_instance.initMemoryInfo("Cpu", .arena, 0, .default);
 
     // Number of frames per input audio chunk
     const n_frames = calcNFrames(chunk_size, n_fft, n_hop);
@@ -207,17 +203,16 @@ fn initOnnx(
     var features = try allocator.alloc(f32, n_frames * n_bins);
     errdefer allocator.free(features);
     @memset(features, 0);
-    var features_ort_input = try ort_api.createTensorWithDataAsOrtValue(
+    var features_ort_input = try onnx_instance.createTensorWithDataAsOrtValue(
         f32,
-        mem_info,
         features,
         features_node_dimms,
         .f32,
     );
-    const input_names: []const [*:0]const u8 = &.{"input"};
-    const ort_inputs = [_]*onnx.c_api.OrtValue{
-        features_ort_input,
-    };
+    var ort_inputs = try allocator.dupe(
+        *onnx.c_api.OrtValue,
+        &.{features_ort_input},
+    );
 
     //
     // Gain output
@@ -229,29 +224,23 @@ fn initOnnx(
     };
     var gains = try allocator.alloc(f32, n_frames * n_bins);
     errdefer allocator.free(gains);
-    var gains_ort_output = try ort_api.createTensorWithDataAsOrtValue(
+    var gains_ort_output = try onnx_instance.createTensorWithDataAsOrtValue(
         f32,
-        mem_info,
         gains,
         gain_node_dimms,
         .f32,
     );
-    const output_names: []const [*:0]const u8 = &.{"output"};
-    var ort_outputs = [_]?*onnx.c_api.OrtValue{
-        gains_ort_output,
-    };
+    var ort_outputs = try allocator.dupe(
+        ?*onnx.c_api.OrtValue,
+        &.{gains_ort_output},
+    );
+
+    onnx_instance.setManagedInputsOutputs(ort_inputs, ort_outputs);
 
     return OnnxState{
         .allocator = allocator,
-        .ort_api = ort_api,
-        .ort_session = ort_sess,
-        .ort_run_options = run_opts,
-
-        .ort_inputs = ort_inputs,
-        .input_names = input_names,
+        .onnx_instance = onnx_instance,
         .features = features,
-        .ort_outputs = ort_outputs,
-        .output_names = output_names,
         .gains = gains,
     };
 }
@@ -272,14 +261,16 @@ fn initTempBuffers(
         audio_read_buffer[i] = try allocator.alloc(f32, chunk_size * downsample_rate);
     }
 
+    // Allocate extra `n_hop` samples for overlap between chunks
     var audio_input = try allocator.alloc(f32, chunk_size + n_hop);
     @memset(audio_input, 0);
 
+    // Allocate extra `n_hop` samples for overlap between chunks
     var audio_output = try allocator.alloc(f32, chunk_size + n_hop);
     @memset(audio_output, 0);
 
     var specgram = try allocator.alloc(FFT.Complex, n_frames * n_bins);
-    @memset(specgram, FFT.Complex{.r = 0, .i = 0});
+    @memset(specgram, FFT.Complex{ .r = 0, .i = 0 });
 
     var inv_fft_buffer = try allocator.alloc(f32, n_fft);
     @memset(inv_fft_buffer, 0);
@@ -327,8 +318,8 @@ fn runInference(state: *InferenceState) !void {
         @memcpy(in_first_hop, in_last_hop);
         @memcpy(out_first_hop, out_last_hop);
 
-        // We don't need to zero the INput buffer because overwritten during downsampling
-        // Zero out the OUTput buffer excluding the last n_hop samples for overlap
+        // We don't need to zero the INput buffer because it's overwritten during downsampling
+        // We do need to zero out the OUTput buffer, its values are additive in the final overlap-add step (reconstructAudio fn)
         @memset(out_after_first_hop, 0);
 
         const n_to_read = downsample_rate * chunk_size;
@@ -368,14 +359,7 @@ fn runInference(state: *InferenceState) !void {
         var os = state.onnx_state;
 
         calcFeatures(buffers.specgram, os.features);
-        try os.ort_api.run(
-            os.ort_session,
-            os.ort_run_options,
-            os.input_names,
-            &os.ort_inputs,
-            os.output_names,
-            &os.ort_outputs,
-        );
+        try os.onnx_instance.run();
         applySpecgramGain(buffers.specgram, os.gains);
 
         try reconstructAudio(
