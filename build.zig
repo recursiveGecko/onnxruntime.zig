@@ -63,8 +63,8 @@ pub fn buildLib(b: *std.Build, common_options: CommonOptions) !*std.build.Compil
 pub fn addOnnxRuntime(b: *std.Build, unit: *std.build.CompileStep, common_options: CommonOptions) !void {
     _ = common_options;
 
-    b.addSearchPrefix("lib/onnxruntime-linux-x64");
-    unit.addIncludePath("lib/onnxruntime-linux-x64/include");
+    b.addSearchPrefix(projectPath("lib/onnxruntime-linux-x64"));
+    unit.addIncludePath(projectPath("lib/onnxruntime-linux-x64/include"));
     // unit.each_lib_rpath = false;
     unit.linkSystemLibrary("onnxruntime");
     unit.linkLibC();
