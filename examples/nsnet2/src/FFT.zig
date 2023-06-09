@@ -13,7 +13,7 @@ pub const Complex = extern struct {
     r: f32,
     i: f32,
 
-    pub fn abs(self: Self) f32 {
+    pub fn abs(self: @This()) f32 {
         return @sqrt(self.r * self.r + self.i * self.i);
     }
 };

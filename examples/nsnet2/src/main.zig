@@ -6,9 +6,15 @@ const AudioFileStream = @import("AudioFileStream.zig");
 const FFT = @import("FFT.zig");
 const window_fn = @import("window_fn.zig");
 
-const example_wav_path = srcDir() ++ "/../data/example3.wav";
-const output_wav_path = srcDir() ++ "/../data/example3.out.wav";
+const example_wav_path = srcDir() ++ "/../data/example2.wav";
+const output_wav_path = srcDir() ++ "/../data/example2.out.wav";
 const nsnet_model_path = srcDir() ++ "/../data/nsnet2-20ms-baseline.onnx";
+
+// Increase the "features" window by this many times to mitigate glitches that occur 
+// at the beginning of each new chunk due  to the internal model state being lost between inference runs.
+// This is a hacky workaround, but it works.
+// Inference will be this many times slower, can be set to 0 to disable mitigations.
+const reduce_glitches_window: usize = 1;
 
 inline fn srcDir() []const u8 {
     return std.fs.path.dirname(@src().file).?;
@@ -95,7 +101,7 @@ pub fn main() !void {
 
     // Number of samples to process per iteration, this can be adjusted to
     // trade between latency and overhead/throughput
-    const chunk_size = n_hop * 50;
+    const chunk_size = n_hop * 10;
 
     //
     // Initialize audio input stream
@@ -192,15 +198,19 @@ fn initOnnx(
         @panic("Invalid number of FFT bins");
     }
 
+    // Part of the audible artifact mitigation strategy, see README.md
+    const n_frames_adjusted = (reduce_glitches_window + 1) * n_frames;
+    const features_gains_size = n_frames_adjusted * n_bins;
+
     //
     // Spectrogram input
     //
     var features_node_dimms: []const i64 = &.{
         1,
-        @intCast(i64, n_frames),
+        @intCast(i64, n_frames_adjusted),
         @intCast(i64, n_bins),
     };
-    var features = try allocator.alloc(f32, n_frames * n_bins);
+    var features = try allocator.alloc(f32, features_gains_size);
     errdefer allocator.free(features);
     @memset(features, 0);
     var features_ort_input = try onnx_instance.createTensorWithDataAsOrtValue(
@@ -219,10 +229,10 @@ fn initOnnx(
     //
     var gain_node_dimms: []const i64 = &.{
         1,
-        @intCast(i64, n_frames),
+        @intCast(i64, n_frames_adjusted),
         @intCast(i64, n_bins),
     };
-    var gains = try allocator.alloc(f32, n_frames * n_bins);
+    var gains = try allocator.alloc(f32, features_gains_size);
     errdefer allocator.free(gains);
     var gains_ort_output = try onnx_instance.createTensorWithDataAsOrtValue(
         f32,
@@ -294,6 +304,7 @@ fn runInference(state: *InferenceState) !void {
     const n_fft = state.n_fft;
     const n_hop = state.n_hop;
     const n_frames = calcNFrames(chunk_size, n_fft, n_hop);
+    const n_bins = calcNBins(n_fft);
 
     const buffers = state.temp_buffers;
 
@@ -312,6 +323,15 @@ fn runInference(state: *InferenceState) !void {
     var out_completed_slice: []f32 = buffers.audio_output[0..chunk_size];
     var out_after_first_hop: []f32 = buffers.audio_output[n_hop..];
 
+    const os = state.onnx_state;
+    // Part of the audible artifact mitigation strategy, see README.md
+    // Offset into the features and gains array where the current chunk's data will be stored
+    const features_gains_curr_idx = os.features.len - n_frames * n_bins;
+    var gains_curr_slice = os.gains[features_gains_curr_idx ..];
+    var features_curr_slice = os.features[features_gains_curr_idx ..];
+    var features_copy_src = os.features[n_frames * n_bins ..];
+    var features_copy_dst = os.features[0 .. features_gains_curr_idx];
+
     while (true) {
         // Copy the last n_hop samples from the previous chunk to the beginning
         // of the next chunk for overlap
@@ -321,6 +341,8 @@ fn runInference(state: *InferenceState) !void {
         // We don't need to zero the INput buffer because it's overwritten during downsampling
         // We do need to zero out the OUTput buffer, its values are additive in the final overlap-add step (reconstructAudio fn)
         @memset(out_after_first_hop, 0);
+
+        std.mem.copyBackwards(f32, features_copy_dst, features_copy_src);
 
         const n_to_read = downsample_rate * chunk_size;
         // Read a chunk of audio
@@ -356,11 +378,9 @@ fn runInference(state: *InferenceState) !void {
             buffers.specgram,
         );
 
-        var os = state.onnx_state;
-
-        calcFeatures(buffers.specgram, os.features);
-        try os.onnx_instance.run();
-        applySpecgramGain(buffers.specgram, os.gains);
+        calcFeatures(buffers.specgram, features_curr_slice);
+        try state.onnx_state.onnx_instance.run();
+        applySpecgramGain(buffers.specgram, gains_curr_slice);
 
         try reconstructAudio(
             state.inv_fft,

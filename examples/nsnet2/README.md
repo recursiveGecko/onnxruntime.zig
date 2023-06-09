@@ -29,6 +29,17 @@ trade-off of higher latency.
 This model could potentially be modified so that it outputs its hidden state and accepts the previous
 state as an input, but unfortunately this is currently outside my skill set. **PRs/contributions welcome!**
 
+**Update:** There's now a simple mitigation strategy in place that mostly eliminates audible artifacts.
+It's controlled via the `reduce_glitches_window` parameter which controls the amount of previous context
+sent to the AI model in each inference run.
+
+When set to 1, it will run inference on the previous `1 * n_frames` in addition to the current `n_frames` 
+and simply discard results for the previous frames, this will "move" the affected glitchy region
+away from the audio we're currently processing and significantly reduce the severity of audible artifacts.
+
+This is still far from ideal and incurs a significant computational cost (doubling processing 
+requirements when `reduce_glitches_window` is set to `1`, tripling when it's set to `2`, etc.)
+
 # Diagram
 
 ![NSNet2 Streaming Diagram](data/NSNet2_Flow_dark.png)
