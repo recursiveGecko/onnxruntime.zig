@@ -5,16 +5,18 @@ pub const CommonOptions = struct {
     optimize: std.builtin.Mode,
 };
 
+pub fn createModule(b: *std.Build) *std.build.Module {
+    return b.createModule(.{
+        .source_file = .{ .path = projectPath("src/lib.zig") },
+    });
+}
+
 pub fn linkPackage(
     b: *std.Build,
     exe: *std.build.CompileStep,
     common_options: CommonOptions,
 ) !void {
-    const module = b.createModule(.{
-        .source_file = .{ .path = projectPath("src/lib.zig") },
-    });
-
-    exe.addModule("onnxruntime", module);
+    exe.addModule("onnxruntime", createModule(b));
     try addOnnxRuntime(b, exe, common_options);
 }
 
