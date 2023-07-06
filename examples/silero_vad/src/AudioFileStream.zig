@@ -27,9 +27,9 @@ pub fn open(allocator: Allocator, path: []const u8) !Self {
         return error.SndfileOpenError;
     }
 
-    const n_channels = @intCast(usize, sf_info.channels);
-    const sample_rate = @intCast(usize, sf_info.samplerate);
-    const length = @intCast(usize, sf_info.frames);
+    const n_channels: usize = @intCast(sf_info.channels);
+    const sample_rate: usize = @intCast(sf_info.samplerate);
+    const length: usize = @intCast(sf_info.frames);
 
     var interleaved_buffer = try allocator.alloc(f32, n_channels * sample_rate);
     errdefer allocator.free(interleaved_buffer);
@@ -73,10 +73,10 @@ pub fn read(self: *Self, result_pcm: [][]f32, result_offset: usize, max_frames: 
     var total_read_count: usize = 0;
     while (true) {
         const frames_to_read = @min(max_frames_per_step, total_frames_to_read - total_read_count);
-        
+
         // Read samples into the interleaved buffer
-        const c_frames_read = sndfile.sf_readf_float(sf_file, self.interleaved_buffer.ptr, @intCast(i64, frames_to_read));
-        const frames_read = @intCast(usize, c_frames_read);
+        const c_frames_read = sndfile.sf_readf_float(sf_file, self.interleaved_buffer.ptr, @as(i64, @intCast(frames_to_read)));
+        const frames_read: usize = @intCast(c_frames_read);
 
         // Organize samples into separated channel buffers
         const base_write_offset = result_offset + total_read_count;
@@ -104,7 +104,7 @@ pub fn seekToSample(self: *Self, sample: usize) !void {
 
     const sf_file = self.sf_file.?;
 
-    const c_sample_index = @intCast(i64, sample);
+    const c_sample_index: i64 = @intCast(sample);
     const c_seek_result = sndfile.sf_seek(sf_file, c_sample_index, sndfile.SEEK_SET);
 
     if (c_seek_result == -1) {
@@ -122,5 +122,5 @@ pub fn close(self: *Self) void {
 }
 
 pub fn durationSeconds(self: Self) f32 {
-    return @intToFloat(f32, self.length) / @intToFloat(f32, self.sample_rate);
+    return @as(f32, @floatFromInt(self.length)) / @as(f32, @floatFromInt(self.sample_rate));
 }

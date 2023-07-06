@@ -14,7 +14,7 @@ pub fn build(
         .target = common_options.target,
         .optimize = common_options.optimize,
     });
-    
+
     exe.linkSystemLibrary("sndfile");
     try main_build.linkPackage(b, exe, common_options);
 

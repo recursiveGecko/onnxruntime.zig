@@ -41,9 +41,9 @@ pub fn openForRead(allocator: Allocator, path: []const u8) !*Self {
         return error.SndfileOpenError;
     }
 
-    self.n_channels = @intCast(usize, self.sf_info.channels);
-    self.sample_rate = @intCast(usize, self.sf_info.samplerate);
-    self.length = @intCast(usize, self.sf_info.frames);
+    self.n_channels = @intCast(self.sf_info.channels);
+    self.sample_rate = @intCast(self.sf_info.samplerate);
+    self.length = @intCast(self.sf_info.frames);
 
     self.interleaved_buffer = try allocator.alloc(f32, self.n_channels * self.sample_rate);
     errdefer allocator.free(self.interleaved_buffer);
@@ -66,8 +66,8 @@ pub fn openForWrite(
     self.* = Self{
         .allocator = allocator,
         .sf_info = std.mem.zeroInit(sndfile.SF_INFO, .{
-            .samplerate = @intCast(i32, sample_rate),
-            .channels = @intCast(i32, n_channels),
+            .samplerate = @as(i32, @intCast(sample_rate)),
+            .channels = @as(i32, @intCast(n_channels)),
             .format = sndfile.SF_FORMAT_WAV | sndfile.SF_FORMAT_FLOAT,
         }),
         .sf_file = undefined,
@@ -126,8 +126,8 @@ pub fn read(
         const frames_to_read = @min(max_frames_per_step, total_frames_to_read - total_read_count);
 
         // Read samples into the interleaved buffer
-        const c_frames_read = sndfile.sf_readf_float(sf_file, self.interleaved_buffer.ptr, @intCast(i64, frames_to_read));
-        const frames_read = @intCast(usize, c_frames_read);
+        const c_frames_read = sndfile.sf_readf_float(sf_file, self.interleaved_buffer.ptr, @as(i64, @intCast(frames_to_read)));
+        const frames_read: usize = @intCast(c_frames_read);
 
         // Organize samples into separated channel buffers
         const base_write_offset = result_offset + total_read_count;
@@ -174,7 +174,7 @@ pub fn seekToSample(self: *Self, sample: usize) !void {
 
     const sf_file = self.sf_file.?;
 
-    const c_sample_index = @intCast(i64, sample);
+    const c_sample_index: i64 = @intCast(sample);
     const c_seek_result = sndfile.sf_seek(sf_file, c_sample_index, sndfile.SEEK_SET);
 
     if (c_seek_result == -1) {
@@ -193,5 +193,5 @@ pub fn close(self: *Self) void {
 }
 
 pub fn durationSeconds(self: Self) f32 {
-    return @intToFloat(f32, self.length) / @intToFloat(f32, self.sample_rate);
+    return @as(f32, @floatFromInt(self.length)) / @as(f32, @floatFromInt(self.sample_rate));
 }

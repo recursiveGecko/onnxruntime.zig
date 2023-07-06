@@ -188,17 +188,17 @@ fn runInference(state: *InferenceState) !void {
     defer state.allocator.free(ts1_buf);
     defer state.allocator.free(ts2_buf);
 
-    const sample_rate_f = @intToFloat(f32, state.audio_stream.sample_rate);
+    const sample_rate_f: f32 = @floatFromInt(state.audio_stream.sample_rate);
 
     // Parameters
     const channel = 0;
-    const min_speech_samples = @floatToInt(
+    const min_speech_samples = @as(
         usize,
-        sample_rate_f * min_speech_duration_ms / 1000,
+        @intFromFloat(sample_rate_f * min_speech_duration_ms / 1000),
     );
-    const max_silence_samples = @floatToInt(
+    const max_silence_samples = @as(
         usize,
-        sample_rate_f * max_silence_duration_ms / 1000,
+        @intFromFloat(sample_rate_f * max_silence_duration_ms / 1000),
     );
     const on_threshold = threshold;
     const off_threshold = on_threshold * 0.85;
@@ -264,15 +264,15 @@ fn runInference(state: *InferenceState) !void {
 }
 
 fn formatTs(buf: []u8, frame_idx: usize, sample_rate: usize) ![]const u8 {
-    const frame_idx_f = @intToFloat(f32, frame_idx);
-    const sample_rate_f = @intToFloat(f32, sample_rate);
+    const frame_idx_f: f32 = @floatFromInt(frame_idx);
+    const sample_rate_f: f32 = @floatFromInt(sample_rate);
 
     const secondsTotal = frame_idx_f / sample_rate_f;
 
-    const hours = @floatToInt(u64, secondsTotal / 3600);
-    const minutes = @floatToInt(u64, (secondsTotal - @intToFloat(f32, hours * 3600)) / 60);
-    const seconds = @floatToInt(u64, @rem(secondsTotal, 60));
-    const ms = @floatToInt(u64, secondsTotal * 1000) % 1000;
+    const hours: u64 = @intFromFloat(secondsTotal / 3600);
+    const minutes: u64 = @intFromFloat((secondsTotal - @as(f32, @floatFromInt(hours * 3600))) / 60);
+    const seconds: u64 = @intFromFloat(@rem(secondsTotal, 60));
+    const ms = @as(u64, @intFromFloat(secondsTotal * 1000)) % 1000;
 
     var ts = try std.fmt.bufPrint(buf, "{d:0>2}:{d:0>2}:{d:0>2}.{d:0>3}", .{ hours, minutes, seconds, ms });
     return ts;

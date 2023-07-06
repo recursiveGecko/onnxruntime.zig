@@ -153,9 +153,9 @@ pub const OnnxInstance = struct {
         var mem_info: ?*c_api.OrtMemoryInfo = null;
         const status = self.ort_api.CreateMemoryInfo.?(
             name.ptr,
-            @enumToInt(allocator_type),
+            @intFromEnum(allocator_type),
             id,
-            @enumToInt(mem_type),
+            @intFromEnum(mem_type),
             &mem_info,
         );
 
@@ -189,7 +189,7 @@ pub const OnnxInstance = struct {
             data.len * @sizeOf(T),
             shape.ptr,
             shape.len,
-            @enumToInt(tensor_type),
+            @intFromEnum(tensor_type),
             &value,
         );
 
@@ -231,7 +231,7 @@ pub const OnnxInstance = struct {
     ) !*c_api.OrtEnv {
         var ort_env: ?*c_api.OrtEnv = null;
         const status = ort_api.CreateEnv.?(
-            @enumToInt(options.log_level),
+            @intFromEnum(options.log_level),
             options.log_id.ptr,
             &ort_env,
         );

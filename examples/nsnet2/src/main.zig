@@ -10,7 +10,7 @@ const example_wav_path = srcDir() ++ "/../data/example2.wav";
 const output_wav_path = srcDir() ++ "/../data/example2.out.wav";
 const nsnet_model_path = srcDir() ++ "/../data/nsnet2-20ms-baseline.onnx";
 
-// Increase the "features" window by this many times to mitigate glitches that occur 
+// Increase the "features" window by this many times to mitigate glitches that occur
 // at the beginning of each new chunk due  to the internal model state being lost between inference runs.
 // This is a hacky workaround, but it works.
 // Inference will be this many times slower, can be set to 0 to disable mitigations.
@@ -207,8 +207,8 @@ fn initOnnx(
     //
     var features_node_dimms: []const i64 = &.{
         1,
-        @intCast(i64, n_frames_adjusted),
-        @intCast(i64, n_bins),
+        @as(i64, @intCast(n_frames_adjusted)),
+        @as(i64, @intCast(n_bins)),
     };
     var features = try allocator.alloc(f32, features_gains_size);
     errdefer allocator.free(features);
@@ -229,8 +229,8 @@ fn initOnnx(
     //
     var gain_node_dimms: []const i64 = &.{
         1,
-        @intCast(i64, n_frames_adjusted),
-        @intCast(i64, n_bins),
+        @as(i64, @intCast(n_frames_adjusted)),
+        @as(i64, @intCast(n_bins)),
     };
     var gains = try allocator.alloc(f32, features_gains_size);
     errdefer allocator.free(gains);
@@ -327,10 +327,10 @@ fn runInference(state: *InferenceState) !void {
     // Part of the audible artifact mitigation strategy, see README.md
     // Offset into the features and gains array where the current chunk's data will be stored
     const features_gains_curr_idx = os.features.len - n_frames * n_bins;
-    var gains_curr_slice = os.gains[features_gains_curr_idx ..];
-    var features_curr_slice = os.features[features_gains_curr_idx ..];
+    var gains_curr_slice = os.gains[features_gains_curr_idx..];
+    var features_curr_slice = os.features[features_gains_curr_idx..];
     var features_copy_src = os.features[n_frames * n_bins ..];
-    var features_copy_dst = os.features[0 .. features_gains_curr_idx];
+    var features_copy_dst = os.features[0..features_gains_curr_idx];
 
     while (true) {
         // Copy the last n_hop samples from the previous chunk to the beginning
@@ -499,7 +499,7 @@ pub fn reconstructAudio(
     const n_frames = specgram.len / n_bins;
 
     // Volume normalization factor
-    const vol_norm_factor: f32 = 1 / @intToFloat(f32, n_fft);
+    const vol_norm_factor: f32 = 1 / @as(f32, @floatFromInt(n_fft));
 
     for (0..n_frames) |frame_idx| {
         const in_start_idx = frame_idx * n_bins;

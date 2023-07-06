@@ -12,7 +12,7 @@ pub fn windowNormFactor(window: []const f32) f32 {
         sum += x;
     }
 
-    return @intToFloat(f32, window.len) / sum;
+    return @as(f32, @floatFromInt(window.len)) / sum;
 }
 
 pub fn squareWindow(result: []f32) void {
@@ -31,16 +31,16 @@ pub fn hannWindowSymmetric(result: []f32) void {
     const a0 = 0.5;
     const a1 = 0.5;
 
-    const N = @intToFloat(f32, result.len);
+    const N: f32 = @floatFromInt(result.len);
     var step = 2 * pi / (N - 1);
 
     for (0..result.len) |n_idx| {
-        const n = @intToFloat(f32, n_idx);
+        const n: f32 = @floatFromInt(n_idx);
         result[n_idx] = a0 - a1 * @cos(n * step);
     }
 }
 
-pub fn hammingWindowPeriodic(result: []f32) void{
+pub fn hammingWindowPeriodic(result: []f32) void {
     const K = 1;
     const a0 = 0.53836;
     const a1 = 1 - a0;
@@ -53,14 +53,14 @@ pub fn cosineSumWindowPeriodic(
     comptime K: usize,
     comptime alphas: [K + 1]f32,
 ) void {
-    const N = @intToFloat(f32, result.len);
+    const N: f32 = @floatFromInt(result.len);
 
     for (0..result.len) |n_idx| {
-        const n = @intToFloat(f32, n_idx);
+        const n: f32 = @floatFromInt(n_idx);
         result[n_idx] = 0;
 
         for (0..K + 1) |k_idx| {
-            const k = @intToFloat(f32, k_idx);
+            const k: f32 = @floatFromInt(k_idx);
 
             result[n_idx] += pow(-1, k) * alphas[k_idx] * @cos((2 * pi * k * n) / N);
         }
