@@ -30,6 +30,7 @@ pub fn build(b: *std.Build) !void {
         .optimize = common_options.optimize,
     });
 
+    exe.linkLibC();
     exe.linkSystemLibrary("sndfile");
     exe.root_module.addImport("onnxruntime", onnx_dep.module("onnxruntime"));
 
