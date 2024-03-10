@@ -64,18 +64,6 @@ pub fn addOnnxRuntime(b: *std.Build, unit: *std.Build.Step.Compile, common_optio
     unit.linkLibC();
 }
 
-// pub fn maybeBuildExamples(
-//     b: *std.Build,
-//     common_options: CommonOptions,
-//     examples_step: *std.Build.Step,
-// ) !void {
-//     const silero_vad = @import("examples/silero_vad/build.zig");
-//     try silero_vad.build(b, common_options, examples_step);
-
-//     const nsnet2 = @import("examples/nsnet2/build.zig");
-//     try nsnet2.build(b, common_options, examples_step);
-// }
-
 pub fn projectPaths(
     allocator: std.mem.Allocator,
     prefix: []const u8,
