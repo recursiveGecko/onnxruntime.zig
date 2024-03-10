@@ -3,21 +3,23 @@ const std = @import("std");
 pub const CommonOptions = struct {
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.Mode,
+    onnx_dep: *std.Build.Dependency,
 };
 
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
+    const onnx_dep = b.dependency("onnxruntime_linux_x64", .{});
+
     const common_options = CommonOptions{
         .target = target,
         .optimize = optimize,
+        .onnx_dep = onnx_dep,
     };
 
     const static_lib = try buildStaticLib(b, common_options);
     _ = static_lib;
-
-    const onnx = b.dependency("onnxruntime_linux_x64", .{});
 
     const lib_mod = b.addModule(
         "onnxruntime",
@@ -28,8 +30,8 @@ pub fn build(b: *std.Build) !void {
         },
     );
 
-    lib_mod.addIncludePath(onnx.path("include"));
-    lib_mod.addLibraryPath(onnx.path("lib"));
+    lib_mod.addIncludePath(onnx_dep.path("include"));
+    lib_mod.addLibraryPath(onnx_dep.path("lib"));
     lib_mod.linkSystemLibrary("onnxruntime", .{});
 }
 
@@ -59,13 +61,14 @@ pub fn buildStaticLib(b: *std.Build, common_options: CommonOptions) !*std.Build.
     return lib;
 }
 
-pub fn addOnnxRuntime(b: *std.Build, unit: *std.Build.Step.Compile, common_options: CommonOptions) !void {
-    _ = common_options;
-
-    const onnx = b.dependency("onnxruntime_linux_x64", .{});
-
-    unit.addIncludePath(onnx.path("include"));
-    unit.addLibraryPath(onnx.path("lib"));
+pub fn addOnnxRuntime(
+    b: *std.Build,
+    unit: *std.Build.Step.Compile,
+    options: CommonOptions,
+) !void {
+    _ = b;
+    unit.addIncludePath(options.onnx_dep.path("include"));
+    unit.addLibraryPath(options.onnx_dep.path("lib"));
 
     unit.each_lib_rpath = true;
     unit.linkSystemLibrary("onnxruntime");

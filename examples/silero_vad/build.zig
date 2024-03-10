@@ -3,15 +3,22 @@ const std = @import("std");
 pub const CommonOptions = struct {
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.Mode,
+    onnx_dep: *std.Build.Dependency,
 };
 
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
+    const onnx_dep = b.dependency("onnxruntime", .{
+        .optimize = optimize,
+        .target = target,
+    });
+
     const common_options = CommonOptions{
         .target = target,
         .optimize = optimize,
+        .onnx_dep = onnx_dep,
     };
 
     const exe = b.addExecutable(.{
@@ -24,9 +31,7 @@ pub fn build(b: *std.Build) !void {
     });
 
     exe.linkSystemLibrary("sndfile");
-
-    const onnxruntime_dep = b.dependency("onnxruntime", .{});
-    exe.root_module.addImport("onnxruntime", onnxruntime_dep.module("onnxruntime"));
+    exe.root_module.addImport("onnxruntime", onnx_dep.module("onnxruntime"));
 
     b.installArtifact(exe);
 
