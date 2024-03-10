@@ -18,7 +18,7 @@ pub fn build(
     exe.linkSystemLibrary("sndfile");
     try main_build.linkPackage(b, exe, common_options);
 
-    const exe_install = b.addInstallArtifact(exe);
+    const exe_install = b.addInstallArtifact(exe, .{});
     examples_step.dependOn(&exe_install.step);
 
     const run_cmd = b.addRunArtifact(exe);

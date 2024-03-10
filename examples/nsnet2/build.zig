@@ -19,7 +19,7 @@ pub fn build(
     try addKissFFT(b, exe, common_options);
     try main_build.linkPackage(b, exe, common_options);
 
-    const exe_install = b.addInstallArtifact(exe);
+    const exe_install = b.addInstallArtifact(exe, .{});
     examples_step.dependOn(&exe_install.step);
 
     const run_cmd = b.addRunArtifact(exe);
@@ -50,11 +50,14 @@ fn addKissFFT(
     });
 
     lib.linkLibC();
-    lib.addCSourceFiles(source_files, &.{"-Wall"});
+    lib.addCSourceFiles(.{
+        .files = source_files,
+        .flags = &.{"-Wall"},
+    });
 
     lib.defineCMacro("kiss_fft_scalar", "float");
 
-    exe.addIncludePath(projectPath("lib/kissfft"));
+    exe.addIncludePath(.{ .path = projectPath("lib/kissfft") });
     exe.linkLibrary(lib);
 }
 

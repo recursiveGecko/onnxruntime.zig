@@ -20,7 +20,7 @@ pub fn open(allocator: Allocator, path: []const u8) !Self {
     defer allocator.free(path_Z);
 
     var sf_info = std.mem.zeroInit(sndfile.SF_INFO, .{});
-    var sf_file = sndfile.sf_open(path_Z.ptr, sndfile.SFM_READ, &sf_info);
+    const sf_file = sndfile.sf_open(path_Z.ptr, sndfile.SFM_READ, &sf_info);
     errdefer _ = sndfile.sf_close(sf_file);
 
     if (sf_file == null) {
@@ -31,10 +31,10 @@ pub fn open(allocator: Allocator, path: []const u8) !Self {
     const sample_rate: usize = @intCast(sf_info.samplerate);
     const length: usize = @intCast(sf_info.frames);
 
-    var interleaved_buffer = try allocator.alloc(f32, n_channels * sample_rate);
+    const interleaved_buffer = try allocator.alloc(f32, n_channels * sample_rate);
     errdefer allocator.free(interleaved_buffer);
 
-    var self = Self{
+    const self = Self{
         .allocator = allocator,
         .sf_info = sf_info,
         .sf_file = sf_file,

@@ -1,11 +1,11 @@
 const std = @import("std");
 
 pub const CommonOptions = struct {
-    target: std.zig.CrossTarget,
+    target: std.Build.ResolvedTarget,
     optimize: std.builtin.Mode,
 };
 
-pub fn createModule(b: *std.Build) *std.build.Module {
+pub fn createModule(b: *std.Build) *std.Build.Module {
     return b.createModule(.{
         .source_file = .{ .path = projectPath("src/lib.zig") },
     });
@@ -13,10 +13,13 @@ pub fn createModule(b: *std.Build) *std.build.Module {
 
 pub fn linkPackage(
     b: *std.Build,
-    exe: *std.build.CompileStep,
+    exe: *std.Build.Step.Compile,
     common_options: CommonOptions,
 ) !void {
-    exe.addModule("onnxruntime", createModule(b));
+    _ = b.addModule("onnxruntime", .{
+        .root_source_file = .{ .path = projectPath("src/lib.zig") },
+    });
+
     try addOnnxRuntime(b, exe, common_options);
 }
 
@@ -36,8 +39,8 @@ pub fn build(b: *std.Build) !void {
     try maybeBuildExamples(b, common_options, examples_build_step);
 }
 
-pub fn buildLib(b: *std.Build, common_options: CommonOptions) !*std.build.CompileStep {
-    var lib = b.addStaticLibrary(.{
+pub fn buildLib(b: *std.Build, common_options: CommonOptions) !*std.Build.Step.Compile {
+    const lib = b.addStaticLibrary(.{
         .name = "zig-onnxruntime",
         .root_source_file = .{ .path = projectPath("src/lib.zig") },
         .target = common_options.target,
@@ -62,11 +65,11 @@ pub fn buildLib(b: *std.Build, common_options: CommonOptions) !*std.build.Compil
     return lib;
 }
 
-pub fn addOnnxRuntime(b: *std.Build, unit: *std.build.CompileStep, common_options: CommonOptions) !void {
+pub fn addOnnxRuntime(b: *std.Build, unit: *std.Build.Step.Compile, common_options: CommonOptions) !void {
     _ = common_options;
 
     b.addSearchPrefix(projectPath("lib/onnxruntime-linux-x64"));
-    unit.addIncludePath(projectPath("lib/onnxruntime-linux-x64/include"));
+    unit.addIncludePath(.{ .path = projectPath("lib/onnxruntime-linux-x64/include") });
     unit.each_lib_rpath = true;
     unit.linkSystemLibrary("onnxruntime");
     unit.linkLibC();

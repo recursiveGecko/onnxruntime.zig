@@ -78,10 +78,10 @@ pub fn main() !void {
     defer onnx_instance.deinit();
 
     // PCM input
-    var pcm_node_dimms: []const i64 = &.{ 1, window_size_samples };
+    const pcm_node_dimms: []const i64 = &.{ 1, window_size_samples };
     var pcm: [window_size_samples]f32 = undefined;
     @memset(&pcm, 0);
-    var pcm_ort_input = try onnx_instance.createTensorWithDataAsOrtValue(
+    const pcm_ort_input = try onnx_instance.createTensorWithDataAsOrtValue(
         f32,
         &pcm,
         pcm_node_dimms,
@@ -89,9 +89,9 @@ pub fn main() !void {
     );
 
     // Sample rate input
-    var sr_node_dimms: []const i64 = &.{1};
+    const sr_node_dimms: []const i64 = &.{1};
     var sr = [1]i64{sample_rate};
-    var sr_ort_input = try onnx_instance.createTensorWithDataAsOrtValue(
+    const sr_ort_input = try onnx_instance.createTensorWithDataAsOrtValue(
         i64,
         &sr,
         sr_node_dimms,
@@ -100,11 +100,11 @@ pub fn main() !void {
 
     // Hidden and cell state inputs
     const size_hc: usize = 2 * 1 * 64;
-    var hc_node_dimms: []const i64 = &.{ 2, 1, 64 };
+    const hc_node_dimms: []const i64 = &.{ 2, 1, 64 };
 
     var h: [size_hc]f32 = undefined;
     @memset(&h, 0);
-    var h_ort_input = try onnx_instance.createTensorWithDataAsOrtValue(
+    const h_ort_input = try onnx_instance.createTensorWithDataAsOrtValue(
         f32,
         &h,
         hc_node_dimms,
@@ -113,7 +113,7 @@ pub fn main() !void {
 
     var c: [size_hc]f32 = undefined;
     @memset(&c, 0);
-    var c_ort_input = try onnx_instance.createTensorWithDataAsOrtValue(
+    const c_ort_input = try onnx_instance.createTensorWithDataAsOrtValue(
         f32,
         &c,
         hc_node_dimms,
@@ -129,7 +129,7 @@ pub fn main() !void {
 
     // Set up outputs
     var vad = [1]f32{1};
-    var vad_ort_output = try onnx_instance.createTensorWithDataAsOrtValue(
+    const vad_ort_output = try onnx_instance.createTensorWithDataAsOrtValue(
         f32,
         &vad,
         &.{ 1, 1 },
@@ -138,7 +138,7 @@ pub fn main() !void {
 
     var hn: [size_hc]f32 = undefined;
     @memset(&hn, 0);
-    var hn_ort_output = try onnx_instance.createTensorWithDataAsOrtValue(
+    const hn_ort_output = try onnx_instance.createTensorWithDataAsOrtValue(
         f32,
         &hn,
         hc_node_dimms,
@@ -147,14 +147,14 @@ pub fn main() !void {
 
     var cn: [size_hc]f32 = undefined;
     @memset(&cn, 0);
-    var cn_ort_output = try onnx_instance.createTensorWithDataAsOrtValue(
+    const cn_ort_output = try onnx_instance.createTensorWithDataAsOrtValue(
         f32,
         &cn,
         hc_node_dimms,
         .f32,
     );
 
-    var ort_outputs = try allocator.dupe(?*onnx.c_api.OrtValue, &.{
+    const ort_outputs = try allocator.dupe(?*onnx.c_api.OrtValue, &.{
         vad_ort_output,
         hn_ort_output,
         cn_ort_output,
@@ -183,8 +183,8 @@ pub fn main() !void {
 }
 
 fn runInference(state: *InferenceState) !void {
-    var ts1_buf = try state.allocator.alloc(u8, 32);
-    var ts2_buf = try state.allocator.alloc(u8, 32);
+    const ts1_buf = try state.allocator.alloc(u8, 32);
+    const ts2_buf = try state.allocator.alloc(u8, 32);
     defer state.allocator.free(ts1_buf);
     defer state.allocator.free(ts2_buf);
 
@@ -274,6 +274,6 @@ fn formatTs(buf: []u8, frame_idx: usize, sample_rate: usize) ![]const u8 {
     const seconds: u64 = @intFromFloat(@rem(secondsTotal, 60));
     const ms = @as(u64, @intFromFloat(secondsTotal * 1000)) % 1000;
 
-    var ts = try std.fmt.bufPrint(buf, "{d:0>2}:{d:0>2}:{d:0>2}.{d:0>3}", .{ hours, minutes, seconds, ms });
+    const ts = try std.fmt.bufPrint(buf, "{d:0>2}:{d:0>2}:{d:0>2}.{d:0>3}", .{ hours, minutes, seconds, ms });
     return ts;
 }

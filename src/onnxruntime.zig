@@ -77,20 +77,20 @@ pub const OnnxInstance = struct {
         allocator: Allocator,
         options: OnnxInstanceOpts,
     ) !*Self {
-        var ort_api: *const c_api.OrtApi = c_api.OrtGetApiBase().*.GetApi.?(c_api.ORT_API_VERSION);
+        const ort_api: *const c_api.OrtApi = c_api.OrtGetApiBase().*.GetApi.?(c_api.ORT_API_VERSION);
 
         const ort_env = try createEnv(ort_api, options);
         const session_opts = try createSessionOptions(ort_api);
 
-        var res1 = ort_api.SetInterOpNumThreads.?(session_opts, options.num_threads);
+        const res1 = ort_api.SetInterOpNumThreads.?(session_opts, options.num_threads);
         std.debug.assert(res1 == null);
-        var res2 = ort_api.SetIntraOpNumThreads.?(session_opts, options.num_threads);
+        const res2 = ort_api.SetIntraOpNumThreads.?(session_opts, options.num_threads);
         std.debug.assert(res2 == null);
 
         const session = try createSession(ort_api, ort_env, session_opts, options);
         const run_opts = try createRunOptions(ort_api);
 
-        var self = try allocator.create(Self);
+        const self = try allocator.create(Self);
         errdefer allocator.destroy(self);
 
         var input_names = try allocator.alloc([*:0]const u8, options.input_names.len);
