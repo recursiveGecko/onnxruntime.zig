@@ -38,7 +38,7 @@ pub fn build(b: *std.Build) !void {
 pub fn buildStaticLib(b: *std.Build, common_options: CommonOptions) !*std.Build.Step.Compile {
     const lib = b.addStaticLibrary(.{
         .name = "onnxruntime-zig",
-        .root_source_file = .{ .path = projectPath("src/lib.zig") },
+        .root_source_file = .{ .path = "src/lib.zig" },
         .target = common_options.target,
         .optimize = common_options.optimize,
     });
@@ -47,7 +47,7 @@ pub fn buildStaticLib(b: *std.Build, common_options: CommonOptions) !*std.Build.
     b.installArtifact(lib);
 
     const main_tests = b.addTest(.{
-        .root_source_file = .{ .path = projectPath("src/lib.zig") },
+        .root_source_file = .{ .path = "src/lib.zig" },
         .target = common_options.target,
         .optimize = common_options.optimize,
     });
@@ -73,31 +73,4 @@ pub fn addOnnxRuntime(
     unit.each_lib_rpath = true;
     unit.linkSystemLibrary("onnxruntime");
     unit.linkLibC();
-}
-
-pub fn projectPaths(
-    allocator: std.mem.Allocator,
-    prefix: []const u8,
-    paths: []const []const u8,
-) ![]const []const u8 {
-    var prefixed_paths = std.ArrayList([]const u8).init(allocator);
-    defer prefixed_paths.deinit();
-
-    for (paths) |path| {
-        const prefixed_path = try std.fs.path.join(allocator, &.{ prefix, path });
-        defer allocator.free(prefixed_path);
-
-        const project_path = try projectPath(allocator, prefixed_path);
-        try prefixed_paths.append(project_path);
-    }
-
-    return prefixed_paths.toOwnedSlice();
-}
-
-pub inline fn projectPath(path: []const u8) []const u8 {
-    return comptime projectBaseDir() ++ .{std.fs.path.sep} ++ path;
-}
-
-pub inline fn projectBaseDir() []const u8 {
-    return comptime std.fs.path.dirname(@src().file).?;
 }

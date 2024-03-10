@@ -29,7 +29,7 @@ pub fn build(b: *std.Build) !void {
         .name = "nsnet2",
         // In this case the main source file is merely a path, however, in more
         // complicated build scripts, this could be a generated file.
-        .root_source_file = .{ .path = projectPath("src/main.zig") },
+        .root_source_file = .{ .path = "src/main.zig" },
         .target = target,
         .optimize = optimize,
     });
@@ -87,12 +87,4 @@ fn addKissFFT(
 
     exe.addIncludePath(options.kissfft_dep.path("."));
     exe.linkLibrary(lib);
-}
-
-pub inline fn projectPath(path: []const u8) []const u8 {
-    return comptime projectBaseDir() ++ .{std.fs.path.sep} ++ path;
-}
-
-pub inline fn projectBaseDir() []const u8 {
-    return comptime std.fs.path.dirname(@src().file).?;
 }

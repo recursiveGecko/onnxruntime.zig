@@ -25,7 +25,7 @@ pub fn build(b: *std.Build) !void {
         .name = "silero_vad",
         // In this case the main source file is merely a path, however, in more
         // complicated build scripts, this could be a generated file.
-        .root_source_file = .{ .path = projectPath("src/main.zig") },
+        .root_source_file = .{ .path = "src/main.zig" },
         .target = common_options.target,
         .optimize = common_options.optimize,
     });
@@ -44,12 +44,4 @@ pub fn build(b: *std.Build) !void {
 
     const run_step = b.step("run", "Run the Silero VAD example");
     run_step.dependOn(&run_cmd.step);
-}
-
-pub inline fn projectPath(path: []const u8) []const u8 {
-    return comptime projectBaseDir() ++ .{std.fs.path.sep} ++ path;
-}
-
-pub inline fn projectBaseDir() []const u8 {
-    return comptime std.fs.path.dirname(@src().file).?;
 }
