@@ -32,7 +32,7 @@ pub fn hannWindowSymmetric(result: []f32) void {
     const a1 = 0.5;
 
     const N: f32 = @floatFromInt(result.len);
-    var step = 2 * pi / (N - 1);
+    const step = 2 * pi / (N - 1);
 
     for (0..result.len) |n_idx| {
         const n: f32 = @floatFromInt(n_idx);

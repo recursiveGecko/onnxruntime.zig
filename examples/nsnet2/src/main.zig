@@ -205,21 +205,21 @@ fn initOnnx(
     //
     // Spectrogram input
     //
-    var features_node_dimms: []const i64 = &.{
+    const features_node_dimms: []const i64 = &.{
         1,
         @as(i64, @intCast(n_frames_adjusted)),
         @as(i64, @intCast(n_bins)),
     };
-    var features = try allocator.alloc(f32, features_gains_size);
+    const features = try allocator.alloc(f32, features_gains_size);
     errdefer allocator.free(features);
     @memset(features, 0);
-    var features_ort_input = try onnx_instance.createTensorWithDataAsOrtValue(
+    const features_ort_input = try onnx_instance.createTensorWithDataAsOrtValue(
         f32,
         features,
         features_node_dimms,
         .f32,
     );
-    var ort_inputs = try allocator.dupe(
+    const ort_inputs = try allocator.dupe(
         *onnx.c_api.OrtValue,
         &.{features_ort_input},
     );
@@ -227,20 +227,20 @@ fn initOnnx(
     //
     // Gain output
     //
-    var gain_node_dimms: []const i64 = &.{
+    const gain_node_dimms: []const i64 = &.{
         1,
         @as(i64, @intCast(n_frames_adjusted)),
         @as(i64, @intCast(n_bins)),
     };
-    var gains = try allocator.alloc(f32, features_gains_size);
+    const gains = try allocator.alloc(f32, features_gains_size);
     errdefer allocator.free(gains);
-    var gains_ort_output = try onnx_instance.createTensorWithDataAsOrtValue(
+    const gains_ort_output = try onnx_instance.createTensorWithDataAsOrtValue(
         f32,
         gains,
         gain_node_dimms,
         .f32,
     );
-    var ort_outputs = try allocator.dupe(
+    const ort_outputs = try allocator.dupe(
         ?*onnx.c_api.OrtValue,
         &.{gains_ort_output},
     );
@@ -272,17 +272,17 @@ fn initTempBuffers(
     }
 
     // Allocate extra `n_hop` samples for overlap between chunks
-    var audio_input = try allocator.alloc(f32, chunk_size + n_hop);
+    const audio_input = try allocator.alloc(f32, chunk_size + n_hop);
     @memset(audio_input, 0);
 
     // Allocate extra `n_hop` samples for overlap between chunks
-    var audio_output = try allocator.alloc(f32, chunk_size + n_hop);
+    const audio_output = try allocator.alloc(f32, chunk_size + n_hop);
     @memset(audio_output, 0);
 
-    var specgram = try allocator.alloc(FFT.Complex, n_frames * n_bins);
+    const specgram = try allocator.alloc(FFT.Complex, n_frames * n_bins);
     @memset(specgram, FFT.Complex{ .r = 0, .i = 0 });
 
-    var inv_fft_buffer = try allocator.alloc(f32, n_fft);
+    const inv_fft_buffer = try allocator.alloc(f32, n_fft);
     @memset(inv_fft_buffer, 0);
 
     return TempBuffers{
@@ -312,25 +312,25 @@ fn runInference(state: *InferenceState) !void {
     // Create logical slices into the input and output buffers
     // for easier access to first and last `n_hop` samples (overlap)
     //
-    var in_last_hop: []f32 = buffers.audio_input[chunk_size .. chunk_size + n_hop];
-    var in_first_hop: []f32 = buffers.audio_input[0..n_hop];
+    const in_last_hop: []f32 = buffers.audio_input[chunk_size .. chunk_size + n_hop];
+    const in_first_hop: []f32 = buffers.audio_input[0..n_hop];
     // This is where the new downsampled audio will be stored, first `n_hop` samples are
     // skipped because they are copied from previous iteration
-    var in_read_slice: []f32 = buffers.audio_input[n_hop..];
+    const in_read_slice: []f32 = buffers.audio_input[n_hop..];
 
-    var out_last_hop: []f32 = buffers.audio_output[chunk_size .. chunk_size + n_hop];
-    var out_first_hop: []f32 = buffers.audio_output[0..n_hop];
-    var out_completed_slice: []f32 = buffers.audio_output[0..chunk_size];
-    var out_after_first_hop: []f32 = buffers.audio_output[n_hop..];
+    const out_last_hop: []f32 = buffers.audio_output[chunk_size .. chunk_size + n_hop];
+    const out_first_hop: []f32 = buffers.audio_output[0..n_hop];
+    const out_completed_slice: []f32 = buffers.audio_output[0..chunk_size];
+    const out_after_first_hop: []f32 = buffers.audio_output[n_hop..];
 
     const os = state.onnx_state;
     // Part of the audible artifact mitigation strategy, see README.md
     // Offset into the features and gains array where the current chunk's data will be stored
     const features_gains_curr_idx = os.features.len - n_frames * n_bins;
-    var gains_curr_slice = os.gains[features_gains_curr_idx..];
-    var features_curr_slice = os.features[features_gains_curr_idx..];
-    var features_copy_src = os.features[n_frames * n_bins ..];
-    var features_copy_dst = os.features[0..features_gains_curr_idx];
+    const gains_curr_slice = os.gains[features_gains_curr_idx..];
+    const features_curr_slice = os.features[features_gains_curr_idx..];
+    const features_copy_src = os.features[n_frames * n_bins ..];
+    const features_copy_dst = os.features[0..features_gains_curr_idx];
 
     while (true) {
         // Copy the last n_hop samples from the previous chunk to the beginning

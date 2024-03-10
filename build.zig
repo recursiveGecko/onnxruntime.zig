@@ -7,7 +7,7 @@ pub const CommonOptions = struct {
 
 pub fn createModule(b: *std.Build) *std.Build.Module {
     return b.createModule(.{
-        .source_file = .{ .path = projectPath("src/lib.zig") },
+        .root_source_file = .{ .path = projectPath("src/lib.zig") },
     });
 }
 
@@ -16,10 +16,7 @@ pub fn linkPackage(
     exe: *std.Build.Step.Compile,
     common_options: CommonOptions,
 ) !void {
-    _ = b.addModule("onnxruntime", .{
-        .root_source_file = .{ .path = projectPath("src/lib.zig") },
-    });
-
+    exe.root_module.addImport("onnxruntime", createModule(b));
     try addOnnxRuntime(b, exe, common_options);
 }
 

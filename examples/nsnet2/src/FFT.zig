@@ -59,7 +59,7 @@ pub fn init(
         return error.KissFFTAllocFailed;
     }
 
-    var self = Self{
+    const self = Self{
         .allocator = allocator,
         .n_fft = n_fft,
         .kiss_cfg = kiss_cfg,

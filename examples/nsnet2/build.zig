@@ -39,8 +39,8 @@ fn addKissFFT(
     options: main_build.CommonOptions,
 ) !void {
     const source_files: []const []const u8 = &.{
-        projectPath("lib/kissfft/kiss_fft.c"),
-        projectPath("lib/kissfft/kiss_fftr.c"),
+        "lib/kissfft/kiss_fft.c",
+        "lib/kissfft/kiss_fftr.c",
     };
 
     const lib = b.addStaticLibrary(.{
@@ -51,6 +51,7 @@ fn addKissFFT(
 
     lib.linkLibC();
     lib.addCSourceFiles(.{
+        .root = .{ .path = projectBaseDir() },
         .files = source_files,
         .flags = &.{"-Wall"},
     });
