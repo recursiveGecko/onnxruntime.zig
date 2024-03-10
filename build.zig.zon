@@ -1,0 +1,18 @@
+// https://github.com/ziglang/zig/blob/4ba4f94c93d5eb1945f1b2c8c53a45cbee609d3b/doc/build.zig.zon.md
+.{
+    .name = "onnxruntime.zig",
+    .version = "0.2.0",
+    .paths = .{
+        "src",
+        "build.zig",
+        "build.zig.zon",
+        "README.md",
+        "LICENSE.txt",
+    },
+    .dependencies = .{
+        .onnxruntime_linux_x64 = .{
+            .url = "https://github.com/microsoft/onnxruntime/releases/download/v1.15.0/onnxruntime-linux-x64-1.15.0.tgz",
+            .hash = "122058eb1c1b55dd52044eb92f0abdfa590063fc393f94584299ff0efe41e4d075de",
+        },
+    },
+}

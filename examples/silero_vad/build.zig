@@ -1,11 +1,19 @@
 const std = @import("std");
-const main_build = @import("../../build.zig");
 
-pub fn build(
-    b: *std.Build,
-    common_options: main_build.CommonOptions,
-    examples_step: *std.Build.Step,
-) !void {
+pub const CommonOptions = struct {
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.Mode,
+};
+
+pub fn build(b: *std.Build) !void {
+    const target = b.standardTargetOptions(.{});
+    const optimize = b.standardOptimizeOption(.{});
+
+    const common_options = CommonOptions{
+        .target = target,
+        .optimize = optimize,
+    };
+
     const exe = b.addExecutable(.{
         .name = "silero_vad",
         // In this case the main source file is merely a path, however, in more
@@ -16,10 +24,11 @@ pub fn build(
     });
 
     exe.linkSystemLibrary("sndfile");
-    try main_build.linkPackage(b, exe, common_options);
 
-    const exe_install = b.addInstallArtifact(exe, .{});
-    examples_step.dependOn(&exe_install.step);
+    const onnxruntime_dep = b.dependency("onnxruntime", .{});
+    exe.root_module.addImport("onnxruntime", onnxruntime_dep.module("onnxruntime"));
+
+    b.installArtifact(exe);
 
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
@@ -28,7 +37,7 @@ pub fn build(
         run_cmd.addArgs(args);
     }
 
-    const run_step = b.step("run-silero-vad", "Run the Silero VAD example");
+    const run_step = b.step("run", "Run the Silero VAD example");
     run_step.dependOn(&run_cmd.step);
 }
 

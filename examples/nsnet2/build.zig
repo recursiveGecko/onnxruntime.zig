@@ -1,26 +1,33 @@
 const std = @import("std");
-const main_build = @import("../../build.zig");
 
-pub fn build(
-    b: *std.Build,
-    common_options: main_build.CommonOptions,
-    examples_step: *std.Build.Step,
-) !void {
+pub const CommonOptions = struct {
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.Mode,
+};
+
+pub fn build(b: *std.Build) !void {
+    const target = b.standardTargetOptions(.{});
+    const optimize = b.standardOptimizeOption(.{});
+
+    const common_options = CommonOptions{
+        .target = target,
+        .optimize = optimize,
+    };
+
     const exe = b.addExecutable(.{
         .name = "nsnet2",
         // In this case the main source file is merely a path, however, in more
         // complicated build scripts, this could be a generated file.
         .root_source_file = .{ .path = projectPath("src/main.zig") },
-        .target = common_options.target,
-        .optimize = common_options.optimize,
+        .target = target,
+        .optimize = optimize,
     });
 
     exe.linkSystemLibrary("sndfile");
     try addKissFFT(b, exe, common_options);
-    try main_build.linkPackage(b, exe, common_options);
+    try addOnnxRuntime(b, exe, common_options);
 
-    const exe_install = b.addInstallArtifact(exe, .{});
-    examples_step.dependOn(&exe_install.step);
+    b.installArtifact(exe);
 
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
@@ -29,19 +36,30 @@ pub fn build(
         run_cmd.addArgs(args);
     }
 
-    const run_step = b.step("run-nsnet", "Run the NSNet2 example");
+    const run_step = b.step("run", "Run the NSNet2 example");
     run_step.dependOn(&run_cmd.step);
+}
+
+fn addOnnxRuntime(
+    b: *std.Build,
+    exe: *std.Build.Step.Compile,
+    _: CommonOptions,
+) !void {
+    const onnxruntime_dep = b.dependency("onnxruntime", .{});
+    exe.root_module.addImport("onnxruntime", onnxruntime_dep.module("onnxruntime"));
 }
 
 fn addKissFFT(
     b: *std.Build,
     exe: *std.Build.Step.Compile,
-    options: main_build.CommonOptions,
+    options: CommonOptions,
 ) !void {
     const source_files: []const []const u8 = &.{
-        "lib/kissfft/kiss_fft.c",
-        "lib/kissfft/kiss_fftr.c",
+        "kiss_fft.c",
+        "kiss_fftr.c",
     };
+
+    const kissfft_dep = b.dependency("kissfft", .{});
 
     const lib = b.addStaticLibrary(.{
         .name = "kissfft",
@@ -51,7 +69,7 @@ fn addKissFFT(
 
     lib.linkLibC();
     lib.addCSourceFiles(.{
-        .root = .{ .path = projectBaseDir() },
+        .root = kissfft_dep.path("."),
         .files = source_files,
         .flags = &.{"-Wall"},
     });

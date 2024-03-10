@@ -1,3 +1,0 @@
-[submodule "examples/nsnet2/lib/kissfft"]
-	path = examples/nsnet2/lib/kissfft
-	url = https://github.com/mborgerding/kissfft

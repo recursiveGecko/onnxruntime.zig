@@ -2,18 +2,6 @@
 
 Work in progress, implementing vertical slices of ONNX Runtime API surface as they're needed.
 
-# Dependencies
-
-To build & run this project, download ONNX Runtime from https://github.com/microsoft/onnxruntime/releases
-and drop the `.so` libraries in `lib/onnxruntime-linux-x64/lib`
-
-
-```bash
-curl https://github.com/microsoft/onnxruntime/releases/download/v1.15.0/onnxruntime-linux-x64-1.15.0.tgz --output lib/onnxruntime.tgz --fail --location
-tar xvf lib/onnxruntime.tgz --directory lib/onnxruntime-linux-x64 --strip-components 1
-rm lib/onnxruntime.tgz
-```
-
 # Examples
 
 Please note that examples don't have a functioning CLI interface at this point, some paths are hardcoded at the top of `main.zig`.
@@ -22,18 +10,16 @@ To build or run the examples, run:
 
 ```bash
 # Run Silero VAD
-zig build run-silero-vad
+cd examples/silero_vad
+zig build run
 # Run NSNet2
-zig build run-nsnet
-# Build all examples
-zig build examples
+cd examples/nsnet2
+zig build run
 ```
 
 # Licensing
 
 `/src/*`, `/examples/*/src/*` and any other first party code - Mozilla Public License 2.0 (`/LICENSE.txt`)
-
-`/lib/*`, `/examples/*/lib/*` and any other third party libraries - See original projects for licensing information.
 
 `/examples/nsnet2/data/*.onnx` - NSNet2 ONNX models are [MIT licensed by Microsoft](https://github.com/microsoft/DNS-Challenge/tree/v4dnschallenge_ICASSP2022).
 

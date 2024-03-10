@@ -1,0 +1,16 @@
+// https://github.com/ziglang/zig/blob/4ba4f94c93d5eb1945f1b2c8c53a45cbee609d3b/doc/build.zig.zon.md
+.{
+    .name = "onnxruntime-zig-silero-vad",
+    .version = "0.1.0",
+    .paths = .{
+        "src",
+        "build.zig",
+        "build.zig.zon",
+        "README.md",
+    },
+    .dependencies = .{
+        .onnxruntime = .{
+            .path = "../..",
+        },
+    },
+}

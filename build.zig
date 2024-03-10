@@ -5,21 +5,6 @@ pub const CommonOptions = struct {
     optimize: std.builtin.Mode,
 };
 
-pub fn createModule(b: *std.Build) *std.Build.Module {
-    return b.createModule(.{
-        .root_source_file = .{ .path = projectPath("src/lib.zig") },
-    });
-}
-
-pub fn linkPackage(
-    b: *std.Build,
-    exe: *std.Build.Step.Compile,
-    common_options: CommonOptions,
-) !void {
-    exe.root_module.addImport("onnxruntime", createModule(b));
-    try addOnnxRuntime(b, exe, common_options);
-}
-
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
@@ -29,23 +14,27 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     };
 
-    const lib = try buildLib(b, common_options);
-    _ = lib;
+    const static_lib = try buildStaticLib(b, common_options);
+    _ = static_lib;
 
-    const examples_build_step = b.step("examples", "Build examples");
-    try maybeBuildExamples(b, common_options, examples_build_step);
+    const lib_mod = b.addModule(
+        "onnxruntime",
+        .{
+            .root_source_file = .{ .path = "src/lib.zig" },
+        },
+    );
+    _ = lib_mod;
 }
 
-pub fn buildLib(b: *std.Build, common_options: CommonOptions) !*std.Build.Step.Compile {
+pub fn buildStaticLib(b: *std.Build, common_options: CommonOptions) !*std.Build.Step.Compile {
     const lib = b.addStaticLibrary(.{
-        .name = "zig-onnxruntime",
+        .name = "onnxruntime-zig",
         .root_source_file = .{ .path = projectPath("src/lib.zig") },
         .target = common_options.target,
         .optimize = common_options.optimize,
     });
 
     try addOnnxRuntime(b, lib, common_options);
-
     b.installArtifact(lib);
 
     const main_tests = b.addTest(.{
@@ -65,24 +54,27 @@ pub fn buildLib(b: *std.Build, common_options: CommonOptions) !*std.Build.Step.C
 pub fn addOnnxRuntime(b: *std.Build, unit: *std.Build.Step.Compile, common_options: CommonOptions) !void {
     _ = common_options;
 
-    b.addSearchPrefix(projectPath("lib/onnxruntime-linux-x64"));
-    unit.addIncludePath(.{ .path = projectPath("lib/onnxruntime-linux-x64/include") });
+    const onnx = b.dependency("onnxruntime_linux_x64", .{});
+
+    unit.addIncludePath(.{ .path = onnx.path("include").getPath(b) });
+    unit.addLibraryPath(.{ .path = onnx.path("lib").getPath(b) });
+
     unit.each_lib_rpath = true;
     unit.linkSystemLibrary("onnxruntime");
     unit.linkLibC();
 }
 
-pub fn maybeBuildExamples(
-    b: *std.Build,
-    common_options: CommonOptions,
-    examples_step: *std.Build.Step,
-) !void {
-    const silero_vad = @import("examples/silero_vad/build.zig");
-    try silero_vad.build(b, common_options, examples_step);
+// pub fn maybeBuildExamples(
+//     b: *std.Build,
+//     common_options: CommonOptions,
+//     examples_step: *std.Build.Step,
+// ) !void {
+//     const silero_vad = @import("examples/silero_vad/build.zig");
+//     try silero_vad.build(b, common_options, examples_step);
 
-    const nsnet2 = @import("examples/nsnet2/build.zig");
-    try nsnet2.build(b, common_options, examples_step);
-}
+//     const nsnet2 = @import("examples/nsnet2/build.zig");
+//     try nsnet2.build(b, common_options, examples_step);
+// }
 
 pub fn projectPaths(
     allocator: std.mem.Allocator,
