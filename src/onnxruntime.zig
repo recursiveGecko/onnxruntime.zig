@@ -278,3 +278,7 @@ pub const OnnxInstance = struct {
         return run_opts.?;
     }
 };
+
+comptime {
+    std.testing.refAllDecls(@This());
+}

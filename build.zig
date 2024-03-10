@@ -17,13 +17,17 @@ pub fn build(b: *std.Build) !void {
     const static_lib = try buildStaticLib(b, common_options);
     _ = static_lib;
 
+    const onnx = b.dependency("onnxruntime_linux_x64", .{});
+
     const lib_mod = b.addModule(
         "onnxruntime",
         .{
             .root_source_file = .{ .path = "src/lib.zig" },
         },
     );
-    _ = lib_mod;
+
+    lib_mod.addIncludePath(.{ .path = onnx.path("include").getPath(b) });
+    lib_mod.addLibraryPath(.{ .path = onnx.path("lib").getPath(b) });
 }
 
 pub fn buildStaticLib(b: *std.Build, common_options: CommonOptions) !*std.Build.Step.Compile {
@@ -42,6 +46,7 @@ pub fn buildStaticLib(b: *std.Build, common_options: CommonOptions) !*std.Build.
         .target = common_options.target,
         .optimize = common_options.optimize,
     });
+    try addOnnxRuntime(b, main_tests, common_options);
 
     const run_main_tests = b.addRunArtifact(main_tests);
 

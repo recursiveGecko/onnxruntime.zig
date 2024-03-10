@@ -76,7 +76,7 @@ fn addKissFFT(
 
     lib.defineCMacro("kiss_fft_scalar", "float");
 
-    exe.addIncludePath(.{ .path = projectPath("lib/kissfft") });
+    exe.addIncludePath(kissfft_dep.path("."));
     exe.linkLibrary(lib);
 }
 
