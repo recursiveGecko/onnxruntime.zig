@@ -175,6 +175,7 @@ pub const OnnxInstance = struct {
         self.ort_outputs = outputs;
     }
 
+    ///	Create a tensor backed by a user supplied buffer.
     pub fn createTensorWithDataAsOrtValue(
         self: *Self,
         comptime T: type,

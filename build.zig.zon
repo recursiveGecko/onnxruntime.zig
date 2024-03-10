@@ -11,8 +11,8 @@
     },
     .dependencies = .{
         .onnxruntime_linux_x64 = .{
-            .url = "https://github.com/microsoft/onnxruntime/releases/download/v1.15.0/onnxruntime-linux-x64-1.15.0.tgz",
-            .hash = "122058eb1c1b55dd52044eb92f0abdfa590063fc393f94584299ff0efe41e4d075de",
+            .url = "https://github.com/microsoft/onnxruntime/releases/download/v1.17.1/onnxruntime-linux-x64-1.17.1.tgz",
+            .hash = "12202c504ed2780644cb6b18ac819a21164abe5371347a1e63283b1b32e2a99871ee",
         },
     },
 }

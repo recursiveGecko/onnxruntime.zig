@@ -66,7 +66,7 @@ pub fn addOnnxRuntime(
     unit: *std.Build.Step.Compile,
     options: CommonOptions,
 ) !void {
-    _ = b;
+    _ = b; // autofix
     unit.addIncludePath(options.onnx_dep.path("include"));
     unit.addLibraryPath(options.onnx_dep.path("lib"));
 
