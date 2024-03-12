@@ -9,7 +9,7 @@
         "README.md",
     },
     .dependencies = .{
-        .onnxruntime = .{
+        .zig_onnxruntime = .{
             .path = "../..",
         },
     },

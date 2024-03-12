@@ -1,28 +1,21 @@
 const std = @import("std");
 
-pub const CommonOptions = struct {
-    target: std.Build.ResolvedTarget,
-    optimize: std.builtin.Mode,
-    onnx_dep: *std.Build.Dependency,
-};
-
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
     const onnx_dep = b.dependency("onnxruntime_linux_x64", .{});
 
-    const common_options = CommonOptions{
-        .target = target,
-        .optimize = optimize,
-        .onnx_dep = onnx_dep,
-    };
-
-    const static_lib = try buildStaticLib(b, common_options);
-    _ = static_lib;
+    // installs onnxruntime.so libraries (without symlinks: https://github.com/ziglang/zig/pull/18619)
+    const install_onnx_libs = b.addInstallDirectory(.{
+        .source_dir = onnx_dep.path("lib"),
+        .install_dir = .lib,
+        .install_subdir = ".",
+    });
+    b.getInstallStep().dependOn(&install_onnx_libs.step);
 
     const lib_mod = b.addModule(
-        "onnxruntime",
+        "zig-onnxruntime",
         .{
             .root_source_file = .{ .path = "src/lib.zig" },
             .target = target,
@@ -33,44 +26,12 @@ pub fn build(b: *std.Build) !void {
     lib_mod.addIncludePath(onnx_dep.path("include"));
     lib_mod.addLibraryPath(onnx_dep.path("lib"));
     lib_mod.linkSystemLibrary("onnxruntime", .{});
-}
 
-pub fn buildStaticLib(b: *std.Build, common_options: CommonOptions) !*std.Build.Step.Compile {
-    const lib = b.addStaticLibrary(.{
-        .name = "onnxruntime-zig",
-        .root_source_file = .{ .path = "src/lib.zig" },
-        .target = common_options.target,
-        .optimize = common_options.optimize,
-    });
-
-    try addOnnxRuntime(b, lib, common_options);
-    b.installArtifact(lib);
-
-    const main_tests = b.addTest(.{
-        .root_source_file = .{ .path = "src/lib.zig" },
-        .target = common_options.target,
-        .optimize = common_options.optimize,
-    });
-    try addOnnxRuntime(b, main_tests, common_options);
-
-    const run_main_tests = b.addRunArtifact(main_tests);
-
-    const test_step = b.step("test", "Run library tests");
-    test_step.dependOn(&run_main_tests.step);
-
-    return lib;
-}
-
-pub fn addOnnxRuntime(
-    b: *std.Build,
-    unit: *std.Build.Step.Compile,
-    options: CommonOptions,
-) !void {
-    _ = b; // autofix
-    unit.addIncludePath(options.onnx_dep.path("include"));
-    unit.addLibraryPath(options.onnx_dep.path("lib"));
-
-    unit.each_lib_rpath = true;
-    unit.linkSystemLibrary("onnxruntime");
-    unit.linkLibC();
+    const onnx_lib_mod = b.addModule(
+        "onnxruntime_lib",
+        .{
+            .root_source_file = onnx_dep.path("lib"),
+        },
+    );
+    _ = onnx_lib_mod; // autofix
 }

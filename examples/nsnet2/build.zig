@@ -11,7 +11,7 @@ pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const onnx_dep = b.dependency("onnxruntime", .{
+    const onnx_dep = b.dependency("zig_onnxruntime", .{
         .optimize = optimize,
         .target = target,
     });
@@ -35,8 +35,22 @@ pub fn build(b: *std.Build) !void {
     });
 
     exe.linkSystemLibrary("sndfile");
+    exe.root_module.addImport("onnxruntime", onnx_dep.module("zig-onnxruntime"));
     try addKissFFT(b, exe, common_options);
-    try addOnnxRuntime(b, exe, common_options);
+
+    exe.root_module.addRPathSpecial("$ORIGIN/../lib");
+    exe.each_lib_rpath = false;
+
+    b.installArtifact(exe);
+
+    // ugly hack to install onnxruntime.so libraries (without symlinks: https://github.com/ziglang/zig/pull/18619)
+    // inspired by https://medium.com/@edlyuu/zig-package-manager-2-wtf-is-build-zig-zon-and-build-zig-0-11-0-update-5bc46e830fc1
+    const install_onnx_libs = b.addInstallDirectory(.{
+        .source_dir = onnx_dep.module("onnxruntime_lib").root_source_file.?,
+        .install_dir = .lib,
+        .install_subdir = ".",
+    });
+    b.getInstallStep().dependOn(&install_onnx_libs.step);
 
     b.installArtifact(exe);
 
@@ -49,15 +63,6 @@ pub fn build(b: *std.Build) !void {
 
     const run_step = b.step("run", "Run the NSNet2 example");
     run_step.dependOn(&run_cmd.step);
-}
-
-fn addOnnxRuntime(
-    b: *std.Build,
-    exe: *std.Build.Step.Compile,
-    options: CommonOptions,
-) !void {
-    _ = b;
-    exe.root_module.addImport("onnxruntime", options.onnx_dep.module("onnxruntime"));
 }
 
 fn addKissFFT(
