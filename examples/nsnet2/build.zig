@@ -3,7 +3,6 @@ const std = @import("std");
 pub const CommonOptions = struct {
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
-    onnx_dep: *std.Build.Dependency,
     kissfft_dep: *std.Build.Dependency,
 };
 
@@ -11,10 +10,11 @@ pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const onnx_dep = b.dependency("zig_onnxruntime", .{
+    const zig_onnx_dep = b.dependency("zig_onnxruntime", .{
         .optimize = optimize,
         .target = target,
     });
+    const onnxruntime_dep = b.dependency("onnxruntime_linux_x64", .{});
 
     const kissfft_dep = b.dependency("kissfft", .{});
     const build_options = b.addOptions();
@@ -23,7 +23,6 @@ pub fn build(b: *std.Build) !void {
     const common_options = CommonOptions{
         .target = target,
         .optimize = optimize,
-        .onnx_dep = onnx_dep,
         .kissfft_dep = kissfft_dep,
     };
 
@@ -39,28 +38,31 @@ pub fn build(b: *std.Build) !void {
     });
 
     exe.linkSystemLibrary("sndfile");
-    exe.root_module.addImport("onnxruntime", onnx_dep.module("onnxruntime"));
+    exe.root_module.addImport("onnxruntime", zig_onnx_dep.module("onnxruntime"));
     exe.root_module.addOptions("build_options", build_options);
+    exe.root_module.addLibraryPath(onnxruntime_dep.path("lib"));
+    exe.linkSystemLibrary("onnxruntime");
     try addKissFFT(b, exe, common_options);
 
-    exe.root_module.addRPathSpecial("$ORIGIN/../lib");
-    exe.each_lib_rpath = false;
+    // install
+    const install_exe = b.addInstallArtifact(exe, .{});
+    b.getInstallStep().dependOn(&install_exe.step);
 
-    b.installArtifact(exe);
+    {
+        // onnxruntime shared library
+        const install_onnxruntime_libs = b.addInstallLibFile(
+            onnxruntime_dep.path("lib/libonnxruntime.so.1"),
+            "libonnxruntime.so.1",
+        );
+        install_exe.step.dependOn(&install_onnxruntime_libs.step);
 
-    // ugly hack to install onnxruntime.so libraries (without symlinks: https://github.com/ziglang/zig/pull/18619)
-    // inspired by https://medium.com/@edlyuu/zig-package-manager-2-wtf-is-build-zig-zon-and-build-zig-0-11-0-update-5bc46e830fc1
-    const install_onnx_libs = b.addInstallDirectory(.{
-        .source_dir = onnx_dep.module("onnxruntime_lib").root_source_file.?,
-        .install_dir = .lib,
-        .install_subdir = ".",
-    });
-    b.getInstallStep().dependOn(&install_onnx_libs.step);
-
-    b.installArtifact(exe);
+        // optional, load library from relative dir
+        exe.root_module.addRPathSpecial("$ORIGIN/../lib");
+        exe.each_lib_rpath = false;
+    }
 
     const run_cmd = b.addRunArtifact(exe);
-    run_cmd.step.dependOn(b.getInstallStep());
+    run_cmd.step.dependOn(&install_exe.step);
 
     if (b.args) |args| {
         run_cmd.addArgs(args);

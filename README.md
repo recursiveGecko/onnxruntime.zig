@@ -2,6 +2,75 @@
 
 Work in progress, implementing vertical slices of ONNX Runtime API surface as they're needed.
 
+# Usage
+
+Add the dependency:
+
+```bash
+zig fetch --save git+https://github.com/recursiveGecko/onnxruntime.zig
+```
+
+Then wire it into `build.zig`:
+
+```zig
+const std = @import("std");
+
+pub fn build(b: *std.Build) !void {
+    const target = b.standardTargetOptions(.{});
+    const optimize = b.standardOptimizeOption(.{});
+
+    // the wrapper
+    const zig_onnx_dep = b.dependency("onnxruntime_zig", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
+    // onnx runtime shared library
+    const onnxruntime_dep = b.dependency("onnxruntime_linux_x64", .{});
+
+    const exe = b.addExecutable(.{
+        .name = "app",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/main.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    exe.root_module.addImport("onnxruntime", zig_onnx_dep.module("onnxruntime"));
+    exe.root_module.addLibraryPath(onnxruntime_dep.path("lib"));
+
+    exe.linkLibC();
+    exe.linkSystemLibrary("onnxruntime");
+
+    // install
+    const install_exe = b.addInstallArtifact(exe, .{});
+    b.getInstallStep().dependOn(&install_exe.step);
+
+    {
+        // onnxruntime shared library
+        const install_onnxruntime_libs = b.addInstallLibFile(
+            onnxruntime_dep.path("lib/libonnxruntime.so.1"),
+            "libonnxruntime.so.1",
+        );
+        install_exe.step.dependOn(&install_onnxruntime_libs.step);
+
+        // optional, load library from relative dir
+        exe.root_module.addRPathSpecial("$ORIGIN/../lib");
+        exe.each_lib_rpath = false;
+    }
+}
+```
+
+And in `src/main.zig`:
+
+```zig
+const onnxruntime = @import("onnxruntime");
+
+pub fn main() !void {
+    _ = onnxruntime;
+}
+```
+
 # Examples
 
 Please note that examples don't have a functioning CLI interface at this point, some paths are hardcoded at the top of `main.zig`.
