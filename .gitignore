@@ -1,6 +1,6 @@
 .vscode
 zig-out
-zig-cache
+.zig-cache
 tmp/
 *.tar*
 *.tgz

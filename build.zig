@@ -14,14 +14,11 @@ pub fn build(b: *std.Build) !void {
     });
     b.getInstallStep().dependOn(&install_onnx_libs.step);
 
-    const lib_mod = b.addModule(
-        "zig-onnxruntime",
-        .{
-            .root_source_file = b.path("src/lib.zig"),
-            .target = target,
-            .optimize = optimize,
-        },
-    );
+    const lib_mod = b.addModule("onnxruntime", .{
+        .root_source_file = b.path("src/onnxruntime.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
 
     lib_mod.addIncludePath(onnx_dep.path("include"));
     lib_mod.addLibraryPath(onnx_dep.path("lib"));

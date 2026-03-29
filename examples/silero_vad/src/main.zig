@@ -1,17 +1,14 @@
 const std = @import("std");
 const onnx = @import("onnxruntime");
+const build_options = @import("build_options");
 const AudioFileStream = @import("AudioFileStream.zig");
 
-const example_wav_path = srcDir() ++ "/../data/example.wav";
-const silero_model_path = srcDir() ++ "/../data/silero_vad.onnx";
+const example_wav_path = build_options.data_dir ++ "/example.wav";
+const silero_model_path = build_options.data_dir ++ "/silero_vad.onnx";
 
 const threshold = 0.5;
 const min_speech_duration_ms: f32 = 250;
 const max_silence_duration_ms: f32 = 100;
-
-inline fn srcDir() []const u8 {
-    return std.fs.path.dirname(@src().file).?;
-}
 
 const InferenceState = struct {
     allocator: std.mem.Allocator,

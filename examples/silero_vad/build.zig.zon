@@ -1,6 +1,7 @@
 // https://github.com/ziglang/zig/blob/4ba4f94c93d5eb1945f1b2c8c53a45cbee609d3b/doc/build.zig.zon.md
 .{
-    .name = "onnxruntime-zig-silero-vad",
+    .name = .example_silero,
+    .fingerprint = 0xf67140056d7159c4,
     .version = "0.1.0",
     .paths = .{
         "src",

@@ -1,7 +1,8 @@
 // https://github.com/ziglang/zig/blob/4ba4f94c93d5eb1945f1b2c8c53a45cbee609d3b/doc/build.zig.zon.md
 .{
-    .name = "onnxruntime.zig",
-    .version = "0.2.0",
+    .name = .onnxruntime_zig,
+    .version = "0.3.0",
+    .fingerprint = 0xc92258e358b8390,
     .paths = .{
         "src",
         "build.zig",

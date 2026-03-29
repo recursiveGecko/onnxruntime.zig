@@ -2,23 +2,20 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const pow = std.math.pow;
 const onnx = @import("onnxruntime");
+const build_options = @import("build_options");
 const AudioFileStream = @import("AudioFileStream.zig");
 const FFT = @import("FFT.zig");
 const window_fn = @import("window_fn.zig");
 
-const example_wav_path = srcDir() ++ "/../data/example2.wav";
-const output_wav_path = srcDir() ++ "/../data/example2.out.wav";
-const nsnet_model_path = srcDir() ++ "/../data/nsnet2-20ms-baseline.onnx";
+const example_wav_path = build_options.data_dir ++ "/example2.wav";
+const output_wav_path = build_options.data_dir ++ "/example2.out.wav";
+const nsnet_model_path = build_options.data_dir ++ "/nsnet2-20ms-baseline.onnx";
 
 // Increase the "features" window by this many times to mitigate glitches that occur
 // at the beginning of each new chunk due  to the internal model state being lost between inference runs.
 // This is a hacky workaround, but it works.
 // Inference will be this many times slower, can be set to 0 to disable mitigations.
 const reduce_glitches_window: usize = 1;
-
-inline fn srcDir() []const u8 {
-    return std.fs.path.dirname(@src().file).?;
-}
 
 const OnnxState = struct {
     allocator: std.mem.Allocator,

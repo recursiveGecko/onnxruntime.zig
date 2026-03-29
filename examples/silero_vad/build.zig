@@ -8,17 +8,22 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
         .target = target,
     });
+    const build_options = b.addOptions();
+    build_options.addOption([]const u8, "data_dir", b.pathFromRoot("data"));
 
     const exe = b.addExecutable(.{
         .name = "silero_vad",
-        // In this case the main source file is merely a path, however, in more
-        // complicated build scripts, this could be a generated file.
-        .root_source_file = b.path("src/main.zig"),
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{
+            // In this case the main source file is merely a path, however, in more
+            // complicated build scripts, this could be a generated file.
+            .root_source_file = b.path("src/main.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
     });
 
-    exe.root_module.addImport("onnxruntime", onnx_dep.module("zig-onnxruntime"));
+    exe.root_module.addImport("onnxruntime", onnx_dep.module("onnxruntime"));
+    exe.root_module.addOptions("build_options", build_options);
     exe.linkLibC();
     exe.linkSystemLibrary("sndfile");
 

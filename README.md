@@ -6,6 +6,9 @@ Work in progress, implementing vertical slices of ONNX Runtime API surface as th
 
 Please note that examples don't have a functioning CLI interface at this point, some paths are hardcoded at the top of `main.zig`.
 
+Both examples currently require `libsndfile` to be installed on the system.
+On Debian/Ubuntu, install `libsndfile1-dev`.
+
 To build or run the examples, run:
 
 ```bash

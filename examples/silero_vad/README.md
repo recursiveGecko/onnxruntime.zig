@@ -2,6 +2,8 @@
 
 Zig implementation of https://github.com/snakers4/silero-vad
 
+Build prerequisite: install `libsndfile` first. On Debian/Ubuntu, install `libsndfile1-dev`.
+
 # Output
 
 Detected speech segments in `example.wav`:
